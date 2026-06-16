@@ -79,7 +79,7 @@ class TestViewModel @Inject constructor(
             is TestEvent.PlayAudio -> {
                 val currentQuestion = _uiState.value.currentQuestion
                 if (currentQuestion is Question.Listening && ttsManager.isAvailable()) {
-                    ttsManager.speak(currentQuestion.audioWord)
+                    ttsManager.speak(currentQuestion.word) // 修复：使用word属性而不是audioWord
                 }
             }
 
@@ -93,25 +93,24 @@ class TestViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
-            generateTestUseCase(type, count)
-                .onSuccess { questions ->
-                    _uiState.update {
-                        it.copy(
-                            testType = type,
-                            questions = questions,
-                            totalQuestions = questions.size,
-                            currentQuestion = questions.firstOrNull(),
-                            currentQuestionIndex = 0,
-                            isLoading = false,
-                            score = 0,
-                            correctCount = 0
-                        )
-                    }
+            try {
+                val questions = generateTestUseCase(type.name.lowercase(), count)
+                _uiState.update {
+                    it.copy(
+                        testType = type,
+                        questions = questions,
+                        totalQuestions = questions.size,
+                        currentQuestion = questions.firstOrNull(),
+                        currentQuestionIndex = 0,
+                        isLoading = false,
+                        score = 0,
+                        correctCount = 0
+                    )
                 }
-                .onFailure { exception ->
-                    _uiState.update {
-                        it.copy(
-                            error = exception.message ?: "生成测试失败",
+            } catch (exception: Exception) {
+                _uiState.update {
+                    it.copy(
+                        error = exception.message ?: "生成测试失败",
                             isLoading = false
                         )
                     }
@@ -128,7 +127,7 @@ class TestViewModel @Inject constructor(
             is Question.MultipleChoice -> selectedAnswer == currentQuestion.correctAnswer
             is Question.FillInBlank -> selectedAnswer.equals(currentQuestion.correctAnswer, ignoreCase = true)
             is Question.Listening -> selectedAnswer.equals(currentQuestion.correctAnswer, ignoreCase = true)
-            is Question.TrueFalse -> selectedAnswer.toBoolean() == currentQuestion.correctAnswer
+            is Question.TrueFalse -> selectedAnswer == currentQuestion.correctAnswer // 修复：String与String比较
         }
 
         val newCorrectCount = if (isCorrect) state.correctCount + 1 else state.correctCount

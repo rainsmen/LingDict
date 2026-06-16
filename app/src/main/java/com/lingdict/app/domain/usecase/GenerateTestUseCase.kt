@@ -1,9 +1,12 @@
 package com.lingdict.app.domain.usecase
 
-import com.lingdict.app.data.repository.UserWordRepositoryImpl
-import com.lingdict.app.data.repository.WordRepositoryImpl
 import com.lingdict.app.domain.model.Question
 import com.lingdict.app.domain.model.UserWord
+import com.lingdict.app.domain.repository.WordRepository
+import com.lingdict.app.domain.repository.UserWordRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
 import kotlin.random.Random
 
@@ -11,8 +14,8 @@ import kotlin.random.Random
  * 生成测试题用例
  */
 class GenerateTestUseCase @Inject constructor(
-    private val wordRepository: WordRepositoryImpl,
-    private val userWordRepository: UserWordRepositoryImpl
+    private val wordRepository: WordRepository,
+    private val userWordRepository: UserWordRepository
 ) {
 
     /**
@@ -21,20 +24,28 @@ class GenerateTestUseCase @Inject constructor(
      * @return 选择题
      */
     suspend fun generateMultipleChoice(userWord: UserWord): Question.MultipleChoice {
-        val correctAnswer = userWord.word.translation
+        val correctAnswer = userWord.translation
 
-        // 获取3个干扰项（随机单词的翻译）
-        val distractors = wordRepository.getRandomWords(3, excludeWord = userWord.word.word)
+        // 获取4个随机单词，排除正确答案，取3个作为干扰项
+        val distractors = wordRepository.getRandomWords(10)
             .map { it.translation }
             .filter { it != correctAnswer }
+            .distinct()
             .take(3)
 
+        // 确保至少有3个干扰项，不足则用占位符
+        val finalDistractors = if (distractors.size < 3) {
+            distractors + List(3 - distractors.size) { "Option ${it + distractors.size + 1}" }
+        } else {
+            distractors
+        }
+
         // 组合并打乱选项
-        val options = (listOf(correctAnswer) + distractors).shuffled()
+        val options = (listOf(correctAnswer) + finalDistractors).shuffled()
 
         return Question.MultipleChoice(
             id = "mc_${userWord.id}_${System.currentTimeMillis()}",
-            word = userWord.word.word,
+            word = userWord.word,
             options = options,
             correctAnswer = correctAnswer
         )
@@ -46,11 +57,12 @@ class GenerateTestUseCase @Inject constructor(
      * @return 填空题
      */
     fun generateFillInBlank(userWord: UserWord): Question.FillInBlank {
-        val word = userWord.word.word
+        val word = userWord.word
 
-        // 隐藏中间部分字母（至少保留首尾各2个字母）
-        val hiddenStart = minOf(2, word.length / 3)
-        val hiddenEnd = maxOf(word.length - 2, word.length - word.length / 3)
+        // 计算隐藏长度，至少隐藏1个字母
+        val hideLength = maxOf((word.length * 0.4).toInt(), 1)
+        val hiddenStart = maxOf(1, (word.length - hideLength) / 2)
+        val hiddenEnd = minOf(word.length - 1, hiddenStart + hideLength)
 
         val visibleStart = word.substring(0, hiddenStart)
         val hiddenPart = word.substring(hiddenStart, hiddenEnd)
@@ -61,6 +73,11 @@ class GenerateTestUseCase @Inject constructor(
         return Question.FillInBlank(
             id = "fb_${userWord.id}_${System.currentTimeMillis()}",
             word = word,
+            hint = displayWord,
+            translation = userWord.translation,
+            correctAnswer = word
+        )
+    }
             displayWord = displayWord,
             hiddenPart = hiddenPart,
             correctAnswer = hiddenPart.lowercase(),
@@ -140,7 +157,7 @@ class GenerateTestUseCase @Inject constructor(
      */
     private suspend fun generateIncorrectSentence(word: String, translation: String): Pair<String, String> {
         // 获取一个随机单词作为错误替换
-        val wrongWord = wordRepository.getRandomWords(1, excludeWord = word)
+        val wrongWord = wordRepository.getRandomWords(1)
             .firstOrNull()?.word ?: "wrong"
 
         val templates = listOf(
@@ -157,12 +174,8 @@ class GenerateTestUseCase @Inject constructor(
      * @param types 题型列表（空表示随机所有类型）
      */
     suspend fun generateTest(count: Int, types: List<String> = emptyList()): List<Question> {
-        // 获取用户的生词
-        val dueWords = userWordRepository.getDueWords(count).let { flow ->
-            val list = mutableListOf<com.lingdict.app.data.local.entity.UserWordEntity>()
-            flow.collect { list.addAll(it) }
-            list
-        }
+        // 获取用户的生词 - 使用first()而不是collect()
+        val dueWords = userWordRepository.getDueWords(count).first()
 
         if (dueWords.isEmpty()) {
             return emptyList()
@@ -170,37 +183,7 @@ class GenerateTestUseCase @Inject constructor(
 
         val availableTypes = types.ifEmpty { listOf("choice", "fill", "listening", "judge") }
 
-        return dueWords.take(count).mapIndexed { index, entity ->
-            // 转换为UserWord
-            val wordResult = wordRepository.getWord(entity.word)
-            val wordEntity = wordResult.getOrNull() ?: return@mapIndexed null
-
-            val userWord = UserWord(
-                id = entity.id,
-                word = com.lingdict.app.domain.model.Word(
-                    word = wordEntity.word,
-                    phonetic = wordEntity.phonetic,
-                    phoneticUs = wordEntity.phoneticUs,
-                    phoneticUk = wordEntity.phoneticUk,
-                    definition = wordEntity.definition,
-                    translation = wordEntity.translation,
-                    level = wordEntity.level
-                ),
-                addedDate = entity.addedDate,
-                lastReviewDate = entity.lastReviewDate,
-                nextReviewDate = entity.nextReviewDate,
-                easeFactor = entity.easeFactor,
-                interval = entity.interval,
-                repetitions = entity.repetitions,
-                status = entity.status,
-                knownCount = entity.knownCount,
-                unknownCount = entity.unknownCount,
-                testCorrectCount = entity.testCorrectCount,
-                testTotalCount = entity.testTotalCount,
-                isFavorite = entity.isFavorite,
-                notes = entity.notes
-            )
-
+        return dueWords.take(count).mapIndexed { index, userWord ->
             // 根据题型生成
             when (availableTypes[index % availableTypes.size]) {
                 "choice" -> generateMultipleChoice(userWord)
@@ -209,6 +192,15 @@ class GenerateTestUseCase @Inject constructor(
                 "judge" -> generateTrueFalse(userWord)
                 else -> generateMultipleChoice(userWord)
             }
-        }.filterNotNull()
+        }
+    }
+
+    /**
+     * 操作符重载，支持简化调用
+     * @param type 题型
+     * @param count 题目数量
+     */
+    suspend operator fun invoke(type: String, count: Int): List<Question> {
+        return generateTest(count, listOf(type))
     }
 }

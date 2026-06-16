@@ -48,12 +48,15 @@ object SM2Algorithm {
             }
             else -> {
                 // 第三次及以后，间隔按EF倍增
-                (userWord.interval * newEaseFactor).toInt() to (userWord.repetitions + 1)
+                val calculatedInterval = (userWord.interval * newEaseFactor).toInt()
+                // 限制最大间隔为365天，防止溢出
+                minOf(calculatedInterval, 365) to (userWord.repetitions + 1)
             }
         }
 
-        // 计算下次复习时间戳
-        val nextReviewDate = System.currentTimeMillis() + newInterval * 24 * 60 * 60 * 1000L
+        // 计算下次复习时间戳，防止溢出
+        val safeInterval = minOf(newInterval, 365)
+        val nextReviewDate = System.currentTimeMillis() + safeInterval * 24 * 60 * 60 * 1000L
 
         // 确定学习状态
         val newStatus = determineStatus(newRepetitions, userWord.knownCount, userWord.testCorrectCount, userWord.testTotalCount)

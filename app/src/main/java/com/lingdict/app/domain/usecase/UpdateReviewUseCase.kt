@@ -115,4 +115,22 @@ class UpdateReviewUseCase @Inject constructor(
             notes = notes
         )
     }
+
+    /**
+     * 操作符重载，支持简化调用
+     * @param userWordId 用户单词ID
+     * @param quality SM-2质量评分（0-5）
+     */
+    suspend operator fun invoke(userWordId: Long, quality: Int): Result<Unit> {
+        // 1. 获取UserWord
+        val userWord = userWordRepository.getUserWord(userWordId)
+            ?: return Result.failure(Exception("单词不存在"))
+
+        // 2. 根据quality调用对应方法
+        return when {
+            quality >= 4 -> markAsKnown(userWord)
+            quality >= 2 -> markAsKnown(userWord) // 中等质量也算认识
+            else -> markAsUnknown(userWord)
+        }
+    }
 }
