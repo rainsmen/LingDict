@@ -33,7 +33,7 @@ sealed class HomeEvent {
     object ClearError : HomeEvent()
 }
 
-data class HomeEffect {
+sealed class HomeEffect {
     data class NavigateToWordDetail(val word: String) : HomeEffect()
 }
 
@@ -75,20 +75,27 @@ class HomeViewModel @Inject constructor(
         .catch { emit(com.lingdict.app.domain.usecase.TodayProgress()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.lingdict.app.domain.usecase.TodayProgress())
 
-    val uiState: StateFlow<HomeUiState> = combine(
+    private val baseUiState = combine(
         _searchQuery,
         searchResults,
         dueWords,
         _isLoading,
-        _error,
-        todayProgress
-    ) { query, results, due, loading, error, progress ->
+        _error
+    ) { query, results, due, loading, error ->
         HomeUiState(
             searchQuery = query,
             searchResults = results,
             dueWords = due,
             isLoading = loading,
-            error = error,
+            error = error
+        )
+    }
+
+    val uiState: StateFlow<HomeUiState> = combine(
+        baseUiState,
+        todayProgress
+    ) { state, progress ->
+        state.copy(
             todayLearned = progress.wordsLearned,
             todayReviewed = progress.wordsReviewed
         )

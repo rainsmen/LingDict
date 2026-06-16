@@ -61,7 +61,7 @@ class StatisticsViewModel @Inject constructor(
                 TimePeriod.MONTH -> 30
                 TimePeriod.YEAR -> 365
             }
-            flow {
+            flow<StudyStatistics?> {
                 val stats = getStatisticsUseCase(days)
                 emit(stats)
             }.catch { emit(null) }

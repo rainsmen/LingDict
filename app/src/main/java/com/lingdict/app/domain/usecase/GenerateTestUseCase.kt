@@ -146,7 +146,7 @@ class GenerateTestUseCase @Inject constructor(
         val templates = listOf(
             "I need to $word this." to "我需要${translation}这个。",
             "Can you $word that?" to "你能${translation}那个吗？",
-            "The $word is important." to "这个$translation很重要。"
+            "The $word is important." to "这个${translation}很重要。"
         )
         return templates.random()
     }
@@ -162,7 +162,7 @@ class GenerateTestUseCase @Inject constructor(
         val templates = listOf(
             "I need to $wrongWord this." to "我需要${translation}这个。",
             "Can you $wrongWord that?" to "你能${translation}那个吗？",
-            "The $wrongWord is important." to "这个$translation很重要。"
+            "The $wrongWord is important." to "这个${translation}很重要。"
         )
         return templates.random()
     }

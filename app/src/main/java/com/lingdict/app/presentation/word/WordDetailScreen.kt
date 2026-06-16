@@ -138,6 +138,8 @@ fun WordDetailView(
     imageUrl: String?,
     onPlayAudio: () -> Unit
 ) {
+    val definition = word.definition.orEmpty()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -216,7 +218,7 @@ fun WordDetailView(
         }
 
         // Definition section
-        if (word.definition.isNotEmpty()) {
+        if (definition.isNotEmpty()) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -244,7 +246,7 @@ fun WordDetailView(
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = word.definition,
+                        text = definition,
                         style = MaterialTheme.typography.bodyLarge
                     )
                 }
