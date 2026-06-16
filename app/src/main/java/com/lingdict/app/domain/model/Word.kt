@@ -2,24 +2,49 @@ package com.lingdict.app.domain.model
 
 /**
  * 单词领域模型
+ *
+ * 从ECDICT词库或有道API获取的单词详细信息
  */
 data class Word(
-    val word: String,                   // 单词
-    val phonetic: String? = null,       // 音标
-    val phoneticUs: String? = null,     // 美式音标
-    val phoneticUk: String? = null,     // 英式音标
-    val definition: String,             // 英文释义
-    val translation: String,            // 中文翻译
-    val level: String? = null,          // 难度等级
-    val examples: List<Example> = emptyList(),  // 例句
-    val imageUrl: String? = null        // 助记图片URL
-)
+    /** 单词原文 */
+    val word: String,
 
-/**
- * 例句
- */
-data class Example(
-    val sentenceEn: String,             // 英文例句
-    val sentenceZh: String,             // 中文翻译
-    val audioUrl: String? = null        // 音频URL
+    /** 音标（通用） */
+    val phonetic: String? = null,
+
+    /** 英文释义 */
+    val definition: String? = null,
+
+    /** 中文翻译 */
+    val translation: String? = null,
+
+    /** 词性 */
+    val pos: String? = null,
+
+    /** 柯林斯星级 */
+    val collins: Int? = null,
+
+    /** 牛津词典标记 */
+    val oxford: Boolean? = null,
+
+    /** 标签（如zk/gk等） */
+    val tag: String? = null,
+
+    /** BNC词频 */
+    val bnc: Int? = null,
+
+    /** 词频 */
+    val frq: Int? = null,
+
+    /** 时态复数等变换 */
+    val exchange: String? = null,
+
+    /** 详细释义 */
+    val detail: String? = null,
+
+    /** 发音音频URL */
+    val audio: String? = null,
+
+    /** 助记图片URL */
+    val imageUrl: String? = null
 )
