@@ -30,7 +30,8 @@ object DatabaseModule {
             LingDictDatabase::class.java,
             LingDictDatabase.DATABASE_NAME
         )
-            .fallbackToDestructiveMigration() // 开发阶段使用，生产环境需要迁移策略
+            .createFromAsset("database/words.db") // 从assets预填充词库
+            .fallbackToDestructiveMigration()
             .build()
     }
 

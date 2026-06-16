@@ -13,6 +13,8 @@ import com.lingdict.app.data.local.entity.WordEntity
 
 /**
  * LingDict应用数据库
+ *
+ * 版本2：从assets预填充ECDICT词库（50,000词条）
  */
 @Database(
     entities = [
@@ -21,8 +23,8 @@ import com.lingdict.app.data.local.entity.WordEntity
         ExampleEntity::class,
         StudyRecordEntity::class
     ],
-    version = 1,
-    exportSchema = false
+    version = 2,
+    exportSchema = true
 )
 @TypeConverters(Converters::class)
 abstract class LingDictDatabase : RoomDatabase() {
