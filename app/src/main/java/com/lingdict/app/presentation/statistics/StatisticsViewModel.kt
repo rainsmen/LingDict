@@ -2,8 +2,7 @@ package com.lingdict.app.presentation.statistics
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lingdict.app.domain.model.Statistics
-import com.lingdict.app.domain.model.WordStatus
+import com.lingdict.app.domain.model.StudyStatistics
 import com.lingdict.app.domain.usecase.GetStatisticsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -12,12 +11,13 @@ import java.time.LocalDate
 import javax.inject.Inject
 
 data class StatisticsUiState(
-    val statistics: Statistics? = null,
+    val statistics: StudyStatistics? = null,
     val dailyRecords: List<DailyRecord> = emptyList(),
-    val wordDistribution: Map<WordStatus, Int> = emptyMap(),
     val learningStreak: Int = 0,
     val totalWordsLearned: Int = 0,
     val masteredWords: Int = 0,
+    val newWords: Int = 0,
+    val learningWords: Int = 0,
     val isLoading: Boolean = false,
     val error: String? = null,
     val selectedPeriod: TimePeriod = TimePeriod.WEEK
@@ -59,8 +59,10 @@ class StatisticsViewModel @Inject constructor(
                 TimePeriod.MONTH -> 30
                 TimePeriod.YEAR -> 365
             }
-            getStatisticsUseCase(days)
-                .catch { emit(null) }
+            flow {
+                val stats = getStatisticsUseCase(days)
+                emit(stats)
+            }.catch { emit(null) }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
@@ -70,22 +72,24 @@ class StatisticsViewModel @Inject constructor(
         _isLoading,
         _error
     ) { stats, period, loading, error ->
-        val dailyRecords = generateDailyRecords(stats, period)
-        val wordDistribution = stats?.let {
-            mapOf(
-                WordStatus.NEW to it.newWords,
-                WordStatus.LEARNING to it.learningWords,
-                WordStatus.MASTERED to it.masteredWords
+        val dailyRecords = stats?.recentTrend?.map { record ->
+            DailyRecord(
+                date = LocalDate.ofEpochDay(record.date / (24 * 60 * 60 * 1000)),
+                wordsLearned = record.wordsLearned,
+                wordsReviewed = record.wordsReviewed,
+                testsCompleted = record.testTotal,
+                accuracy = record.getAccuracy()
             )
-        } ?: emptyMap()
+        } ?: emptyList()
 
         StatisticsUiState(
             statistics = stats,
             dailyRecords = dailyRecords,
-            wordDistribution = wordDistribution,
-            learningStreak = stats?.consecutiveDays ?: 0,
-            totalWordsLearned = stats?.totalWords ?: 0,
-            masteredWords = stats?.masteredWords ?: 0,
+            learningStreak = stats?.studyStreak ?: 0,
+            totalWordsLearned = stats?.totalWordsLearned ?: 0,
+            masteredWords = stats?.masteryDistribution?.masteredWords ?: 0,
+            newWords = stats?.masteryDistribution?.newWords ?: 0,
+            learningWords = stats?.masteryDistribution?.learningWords ?: 0,
             isLoading = loading,
             error = error,
             selectedPeriod = period
@@ -122,29 +126,6 @@ class StatisticsViewModel @Inject constructor(
             // Statistics will be loaded through Flow
             _isLoading.value = false
         }
-    }
-
-    private fun generateDailyRecords(stats: Statistics?, period: TimePeriod): List<DailyRecord> {
-        val days = when (period) {
-            TimePeriod.WEEK -> 7
-            TimePeriod.MONTH -> 30
-            TimePeriod.YEAR -> 365
-        }
-
-        // Use real data from statistics if available
-        return (0 until days).map { dayOffset ->
-            val date = LocalDate.now().minusDays(dayOffset.toLong())
-
-            // In a real implementation, you would query StudyRecordRepository for each date
-            // For now, we'll use the statistics data if available
-            DailyRecord(
-                date = date,
-                wordsLearned = if (stats != null && dayOffset == 0) stats.newWords else 0,
-                wordsReviewed = if (stats != null && dayOffset == 0) stats.learningWords else 0,
-                testsCompleted = 0,
-                accuracy = 0f
-            )
-        }.reversed()
     }
 }
 

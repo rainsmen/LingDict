@@ -49,8 +49,19 @@ class WordDetailViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
-            searchWordUseCase(wordParam)
-                .catch { exception ->
+            try {
+                // 使用getWordDetail获取完整单词信息
+                val result = searchWordUseCase.getWordDetail(wordParam)
+
+                result.onSuccess { word ->
+                    _uiState.update {
+                        it.copy(
+                            word = word,
+                            imageUrl = word.imageUrl,
+                            isLoading = false
+                        )
+                    }
+                }.onFailure { exception ->
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -58,35 +69,19 @@ class WordDetailViewModel @Inject constructor(
                         )
                     }
                 }
-                .collect { words ->
-                    val word = words.firstOrNull()
-                    if (word != null) {
-                        _uiState.update { it.copy(word = word, isLoading = false) }
-                        loadImage(word.word)
-                    } else {
-                        _uiState.update {
-                            it.copy(
-                                isLoading = false,
-                                error = "单词不存在"
-                            )
-                        }
-                    }
+            } catch (exception: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = exception.message ?: "加载失败"
+                    )
                 }
+            }
         }
     }
 
     private fun loadImage(word: String) {
-        viewModelScope.launch {
-            pexelsRepository.searchPhotos(word, 1)
-                .onSuccess { photos ->
-                    _uiState.update {
-                        it.copy(imageUrl = photos.firstOrNull()?.src?.medium)
-                    }
-                }
-                .onFailure {
-                    // Ignore image loading failure, word details are more important
-                }
-        }
+        // 已通过getWordDetail获取图片，此方法已不需要
     }
 
     fun onEvent(event: WordDetailEvent) {

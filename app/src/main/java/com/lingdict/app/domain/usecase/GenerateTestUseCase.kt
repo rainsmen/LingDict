@@ -1,12 +1,11 @@
 package com.lingdict.app.domain.usecase
 
+import com.lingdict.app.domain.constants.QuestionTypes
 import com.lingdict.app.domain.model.Question
 import com.lingdict.app.domain.model.UserWord
-import com.lingdict.app.domain.repository.WordRepository
 import com.lingdict.app.domain.repository.UserWordRepository
-import kotlinx.coroutines.flow.Flow
+import com.lingdict.app.domain.repository.WordRepository
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
 import kotlin.random.Random
 
@@ -14,8 +13,8 @@ import kotlin.random.Random
  * 生成测试题用例
  */
 class GenerateTestUseCase @Inject constructor(
-    private val wordRepository: WordRepository,
-    private val userWordRepository: UserWordRepository
+    private val userWordRepository: UserWordRepository,
+    private val wordRepository: WordRepository
 ) {
 
     /**
@@ -175,15 +174,22 @@ class GenerateTestUseCase @Inject constructor(
             return emptyList()
         }
 
-        val availableTypes = types.ifEmpty { listOf("choice", "fill", "listening", "judge") }
+        val availableTypes = types.ifEmpty {
+            listOf(
+                QuestionTypes.MULTIPLE_CHOICE,
+                QuestionTypes.FILL_IN_BLANK,
+                QuestionTypes.LISTENING,
+                QuestionTypes.TRUE_FALSE
+            )
+        }
 
         return dueWords.take(count).mapIndexed { index, userWord ->
             // 根据题型生成
             when (availableTypes[index % availableTypes.size]) {
-                "choice" -> generateMultipleChoice(userWord)
-                "fill" -> generateFillInBlank(userWord)
-                "listening" -> generateListening(userWord)
-                "judge" -> generateTrueFalse(userWord)
+                QuestionTypes.MULTIPLE_CHOICE -> generateMultipleChoice(userWord)
+                QuestionTypes.FILL_IN_BLANK -> generateFillInBlank(userWord)
+                QuestionTypes.LISTENING -> generateListening(userWord)
+                QuestionTypes.TRUE_FALSE -> generateTrueFalse(userWord)
                 else -> generateMultipleChoice(userWord)
             }
         }

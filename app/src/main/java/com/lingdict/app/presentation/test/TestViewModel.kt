@@ -2,6 +2,7 @@ package com.lingdict.app.presentation.test
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lingdict.app.domain.constants.QuestionTypes
 import com.lingdict.app.domain.model.Question
 import com.lingdict.app.domain.usecase.GenerateTestUseCase
 import com.lingdict.app.util.TTSManager
@@ -94,7 +95,14 @@ class TestViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
 
             try {
-                val questions = generateTestUseCase(type.name.lowercase(), count)
+                val typeString = when (type) {
+                    TestType.MULTIPLE_CHOICE -> QuestionTypes.MULTIPLE_CHOICE
+                    TestType.FILL_IN_BLANK -> QuestionTypes.FILL_IN_BLANK
+                    TestType.LISTENING -> QuestionTypes.LISTENING
+                    TestType.TRUE_FALSE -> QuestionTypes.TRUE_FALSE
+                }
+
+                val questions = generateTestUseCase(typeString, count)
                 _uiState.update {
                     it.copy(
                         testType = type,
