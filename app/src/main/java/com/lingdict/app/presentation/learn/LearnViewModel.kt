@@ -23,7 +23,7 @@ data class LearnUiState(
 
 sealed class LearnEvent {
     object FlipCard : LearnEvent()
-    data class SwipeLeft(val quality: Int = 2) : LearnEvent()  // 不认识
+    data class SwipeLeft(val quality: Int = 1) : LearnEvent()  // 不认识（修正为 1，确保路由到 markAsUnknown）
     data class SwipeRight(val quality: Int = 4) : LearnEvent() // 认识
     data class SwipeUp(val quality: Int = 5) : LearnEvent()    // 很熟悉
     object PlayAudio : LearnEvent()

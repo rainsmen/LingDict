@@ -27,7 +27,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import com.lingdict.app.domain.model.WordStatus
+import com.lingdict.app.data.local.entity.WordStatus
 import com.lingdict.app.presentation.component.AchievementBadge
 import com.lingdict.app.presentation.theme.LingDictTheme
 import java.time.LocalDate

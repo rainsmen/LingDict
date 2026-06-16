@@ -38,7 +38,11 @@ object NetworkModule {
             .writeTimeout(30, TimeUnit.SECONDS)
             .addInterceptor(
                 HttpLoggingInterceptor().apply {
-                    level = HttpLoggingInterceptor.Level.BODY
+                    level = if (BuildConfig.DEBUG) {
+                        HttpLoggingInterceptor.Level.BODY  // Debug 模式：详细日志
+                    } else {
+                        HttpLoggingInterceptor.Level.NONE  // Release 模式：不输出日志
+                    }
                 }
             )
             .build()

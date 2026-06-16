@@ -13,7 +13,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.lingdict.app.domain.model.UserWord
-import com.lingdict.app.domain.model.WordStatus
+import com.lingdict.app.data.local.entity.WordStatus
 import com.lingdict.app.presentation.theme.LingDictTheme
 
 @OptIn(ExperimentalMaterial3Api::class)

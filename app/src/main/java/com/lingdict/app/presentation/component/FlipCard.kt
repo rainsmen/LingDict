@@ -86,7 +86,7 @@ private fun CardFront(
                 textAlign = TextAlign.Center
             )
 
-            if (word.phonetic.isNotEmpty()) {
+            if (!word.phonetic.isNullOrEmpty()) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -108,11 +108,11 @@ private fun CardFront(
                 }
             }
 
-            if (word.level != null) {
+            if (word.tag != null) {
                 Spacer(modifier = Modifier.height(16.dp))
                 SuggestionChip(
                     onClick = { },
-                    label = { Text(word.level) }
+                    label = { Text(word.tag) }
                 )
             }
 
@@ -138,7 +138,7 @@ private fun CardBack(word: Word) {
             verticalArrangement = Arrangement.Center
         ) {
             // English Definition
-            if (word.definition.isNotEmpty()) {
+            if (!word.definition.isNullOrEmpty()) {
                 Text(
                     text = "Definition",
                     style = MaterialTheme.typography.titleMedium,

@@ -1,5 +1,12 @@
 # 🚀 GitHub Actions APK自动构建 - 完整操作指南
 
+> ⚠️ **安全警告**: 本文档之前版本包含的 API 密钥已公开泄露在 Git 历史中，请勿继续使用。
+> 
+> **请立即采取以下行动：**
+> 1. 访问 [有道智云](https://ai.youdao.com/) 和 [Pexels API](https://www.pexels.com/api/) 重新申请新的 API 密钥
+> 2. 如果之前使用过泄露的密钥，请在对应平台撤销旧密钥
+> 3. 使用新密钥按照下方步骤配置 GitHub Secrets
+
 ## ✅ 已完成的工作
 
 我已经为你创建了：
@@ -40,19 +47,19 @@ git push origin main
 #### Secret 1: YOUDAO_APP_KEY
 1. 点击 **New repository secret**
 2. Name输入：`YOUDAO_APP_KEY`
-3. Secret输入：`5f2d7eb0cf9f328f`
+3. Secret输入：`your_youdao_app_key_here`（请替换为你从有道智云申请的真实 APP Key）
 4. 点击 **Add secret**
 
 #### Secret 2: YOUDAO_APP_SECRET
 1. 点击 **New repository secret**
 2. Name输入：`YOUDAO_APP_SECRET`
-3. Secret输入：`tTtqujYlNqaBFJlkVQqheKLcX976InDe`
+3. Secret输入：`your_youdao_app_secret_here`（请替换为你从有道智云申请的真实 APP Secret）
 4. 点击 **Add secret**
 
 #### Secret 3: PEXELS_API_KEY
 1. 点击 **New repository secret**
 2. Name输入：`PEXELS_API_KEY`
-3. Secret输入：`r8EusdndsAEQsXT074L3nxbPvR0Z6qidQIGXfReWPARtpvXqSrC2lKbr`
+3. Secret输入：`your_pexels_api_key_here`（请替换为你从 Pexels 申请的真实 API Key）
 4. 点击 **Add secret**
 
 **设置后应该看到3个Secrets**：

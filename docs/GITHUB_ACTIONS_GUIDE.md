@@ -1,5 +1,12 @@
 # GitHub Actions APK自动编译配置指南
 
+> ⚠️ **安全警告**: 本文档之前版本包含的 API 密钥已公开泄露在 Git 历史中，请勿继续使用。
+> 
+> **请立即采取以下行动：**
+> 1. 访问 [有道智云](https://ai.youdao.com/) 和 [Pexels API](https://www.pexels.com/api/) 重新申请新的 API 密钥
+> 2. 如果之前使用过泄露的密钥，请在对应平台撤销旧密钥
+> 3. 使用新密钥按照下方步骤配置 GitHub Secrets
+
 ## 📋 前置要求
 
 已创建GitHub Actions工作流配置文件：`.github/workflows/build-apk.yml`
@@ -18,17 +25,17 @@
 
 #### Secret 1: YOUDAO_APP_KEY
 - **Name**: `YOUDAO_APP_KEY`
-- **Value**: `5f2d7eb0cf9f328f`
+- **Value**: `your_youdao_app_key_here`（请替换为你从有道智云申请的真实 APP Key）
 - 点击 **Add secret**
 
 #### Secret 2: YOUDAO_APP_SECRET
 - **Name**: `YOUDAO_APP_SECRET`
-- **Value**: `tTtqujYlNqaBFJlkVQqheKLcX976InDe`
+- **Value**: `your_youdao_app_secret_here`（请替换为你从有道智云申请的真实 APP Secret）
 - 点击 **Add secret**
 
 #### Secret 3: PEXELS_API_KEY
 - **Name**: `PEXELS_API_KEY`
-- **Value**: `r8EusdndsAEQsXT074L3nxbPvR0Z6qidQIGXfReWPARtpvXqSrC2lKbr`
+- **Value**: `your_pexels_api_key_here`（请替换为你从 Pexels 申请的真实 API Key）
 - 点击 **Add secret**
 
 ---

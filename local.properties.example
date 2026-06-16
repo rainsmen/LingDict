@@ -1,7 +1,14 @@
-# API Keys (请填写你的API密钥)
+# Android SDK 路径（由 CI 自动设置，本地开发无需此行）
+# sdk.dir=/path/to/android/sdk
+
+# API 密钥配置
+# 请访问以下网站申请新的 API 密钥：
+# - 有道智云: https://ai.youdao.com/
+# - Pexels API: https://www.pexels.com/api/
+
+# 有道翻译 API
 YOUDAO_APP_KEY=your_youdao_app_key_here
 YOUDAO_APP_SECRET=your_youdao_app_secret_here
-PEXELS_API_KEY=your_pexels_api_key_here
 
-# Android SDK路径 (根据你的实际路径配置)
-# sdk.dir=/path/to/Android/Sdk
+# Pexels 图片 API
+PEXELS_API_KEY=your_pexels_api_key_here

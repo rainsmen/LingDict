@@ -15,7 +15,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.lingdict.app.domain.model.UserWord
 import com.lingdict.app.domain.model.Word
-import com.lingdict.app.domain.model.WordStatus
+import com.lingdict.app.data.local.entity.WordStatus
 import com.lingdict.app.presentation.component.SwipeableCard
 import com.lingdict.app.presentation.theme.LingDictTheme
 

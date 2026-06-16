@@ -135,7 +135,7 @@ class TestViewModel @Inject constructor(
             is Question.MultipleChoice -> selectedAnswer == currentQuestion.correctAnswer
             is Question.FillInBlank -> selectedAnswer.equals(currentQuestion.correctAnswer, ignoreCase = true)
             is Question.Listening -> selectedAnswer.equals(currentQuestion.correctAnswer, ignoreCase = true)
-            is Question.TrueFalse -> selectedAnswer == currentQuestion.correctAnswer // 修复：String与String比较
+            is Question.TrueFalse -> selectedAnswer.toBoolean() == currentQuestion.correctAnswer  // 修复：转换为 Boolean 比较
         }
 
         val newCorrectCount = if (isCorrect) state.correctCount + 1 else state.correctCount
@@ -147,6 +147,12 @@ class TestViewModel @Inject constructor(
                 correctCount = newCorrectCount
             )
         }
+
+        // TODO: 添加测试结果持久化
+        // 需要在 Question 模型中添加 userWordId 字段，然后调用：
+        // viewModelScope.launch {
+        //     updateReviewUseCase.recordTestResult(userWordId, isCorrect)
+        // }
     }
 
     private fun moveToNextQuestion() {
