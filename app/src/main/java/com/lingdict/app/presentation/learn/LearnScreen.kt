@@ -157,11 +157,11 @@ fun LearnCardSection(
         uiState.currentWord?.let { userWord ->
             SwipeableCard(
                 word = Word(
-                    word = userWord.word,
-                    phonetic = userWord.phonetic,
-                    definition = userWord.definition,
-                    translation = userWord.translation,
-                    level = userWord.level
+                    word = userWord.word.word,
+                    phonetic = userWord.word.phonetic,
+                    definition = userWord.word.definition,
+                    translation = userWord.word.translation,
+                    level = userWord.word.level
                 ),
                 isFlipped = uiState.isFlipped,
                 onFlip = { onEvent(LearnEvent.FlipCard) },
@@ -255,11 +255,13 @@ fun LearnScreenPreview() {
             uiState = LearnUiState(
                 currentWord = UserWord(
                     id = 1,
-                    word = "dictionary",
-                    phonetic = "/ˈdɪkʃəneri/",
-                    definition = "A book or electronic resource that lists the words of a language",
-                    translation = "n. 字典；词典",
-                    level = "CET4",
+                    word = Word(
+                        word = "dictionary",
+                        phonetic = "/ˈdɪkʃəneri/",
+                        definition = "A book or electronic resource that lists the words of a language",
+                        translation = "n. 字典；词典",
+                        level = "CET4"
+                    ),
                     addedDate = System.currentTimeMillis(),
                     lastReviewDate = null,
                     nextReviewDate = System.currentTimeMillis(),

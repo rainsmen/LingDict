@@ -106,7 +106,7 @@ class LearnViewModel @Inject constructor(
             is LearnEvent.PlayAudio -> {
                 val currentWord = uiState.value.currentWord
                 if (currentWord != null && ttsManager.isAvailable()) {
-                    ttsManager.speak(currentWord.word)
+                    ttsManager.speak(currentWord.word.word)
                 } else if (!ttsManager.isAvailable()) {
                     _error.value = "语音功能不可用，请检查TTS设置"
                 }

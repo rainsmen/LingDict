@@ -4,19 +4,28 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import com.lingdict.app.presentation.navigation.LingDictApp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.lingdict.app.data.datastore.UserSettings
+import com.lingdict.app.domain.repository.SettingsRepository
 import com.lingdict.app.presentation.theme.LingDictTheme
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var settingsRepository: SettingsRepository
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            LingDictTheme {
-                // 使用预填充数据库，直接进入主界面
-                LingDictApp()
+            val userSettings = settingsRepository.getUserSettings()
+                .collectAsStateWithLifecycle(initialValue = UserSettings())
+
+            LingDictTheme(darkTheme = userSettings.value.darkMode) {
+                RootNavigation()
             }
         }
     }

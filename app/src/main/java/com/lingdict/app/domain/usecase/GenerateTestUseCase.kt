@@ -45,6 +45,7 @@ class GenerateTestUseCase @Inject constructor(
         return Question.MultipleChoice(
             id = "mc_${userWord.id}_${System.currentTimeMillis()}",
             word = userWord.word.word,
+            userWordId = userWord.id,
             options = options,
             correctAnswer = correctAnswer
         )
@@ -68,13 +69,16 @@ class GenerateTestUseCase @Inject constructor(
         val visibleEnd = word.substring(hiddenEnd)
 
         val displayWord = "$visibleStart${"_".repeat(hiddenPart.length)}$visibleEnd"
+        val translation = userWord.word.translation.orEmpty()
 
         return Question.FillInBlank(
             id = "fb_${userWord.id}_${System.currentTimeMillis()}",
             word = word,
-            hint = displayWord,
-            translation = userWord.word.translation ?: "",
-            correctAnswer = word
+            userWordId = userWord.id,
+            displayWord = displayWord,
+            hiddenPart = hiddenPart,
+            correctAnswer = word,
+            hint = translation
         )
     }
 
@@ -97,6 +101,7 @@ class GenerateTestUseCase @Inject constructor(
         return Question.Listening(
             id = "ls_${userWord.id}_${System.currentTimeMillis()}",
             word = correctAnswer,
+            userWordId = userWord.id,
             options = options,
             correctAnswer = correctAnswer
         )
@@ -109,7 +114,7 @@ class GenerateTestUseCase @Inject constructor(
      */
     suspend fun generateTrueFalse(userWord: UserWord): Question.TrueFalse {
         val word = userWord.word.word
-        val translation = userWord.word.translation
+        val translation = userWord.word.translation.orEmpty()
 
         // 随机决定是否使用正确用法
         val isCorrectUsage = Random.nextBoolean()
@@ -125,10 +130,11 @@ class GenerateTestUseCase @Inject constructor(
         return Question.TrueFalse(
             id = "tf_${userWord.id}_${System.currentTimeMillis()}",
             word = word,
+            userWordId = userWord.id,
             sentence = sentence,
             translation = sentenceTranslation,
             isCorrectUsage = isCorrectUsage,
-            correctAnswer = if (isCorrectUsage) "true" else "false"
+            correctAnswer = isCorrectUsage
         )
     }
 

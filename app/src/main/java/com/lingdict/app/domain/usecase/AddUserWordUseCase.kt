@@ -33,8 +33,6 @@ class AddUserWordUseCase @Inject constructor(
      * 检查单词是否已在生词库中
      */
     suspend fun isWordAdded(word: String): Boolean {
-        // 接口没有此方法，暂时返回false
-        // TODO: 添加到接口或通过其他方式实现
-        return false
+        return userWordRepository.isWordAdded(word)
     }
 }

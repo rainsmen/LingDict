@@ -69,18 +69,31 @@ class UpdateReviewUseCase @Inject constructor(
      * @param isCorrect 是否正确
      */
     suspend fun recordTestResult(userWord: UserWord, isCorrect: Boolean): Result<Unit> {
-        // 1. 使用SM-2算法计算
         val quality = SM2Algorithm.qualityFromTestResult(isCorrect)
         val updatedWord = SM2Algorithm.calculateNextReview(userWord, quality)
 
-        // 2. 更新测试统计
         val wordToSave = updatedWord.copy(
             testTotalCount = updatedWord.testTotalCount + 1,
             testCorrectCount = if (isCorrect) updatedWord.testCorrectCount + 1 else updatedWord.testCorrectCount
         )
 
-        // 3. 保存到数据库
-        return userWordRepository.updateReview(wordToSave)
+        val result = userWordRepository.updateReview(wordToSave)
+        if (result.isSuccess) {
+            studyRecordRepository.recordTestResult(
+                correct = if (isCorrect) 1 else 0,
+                total = 1
+            )
+        }
+        return result
+    }
+
+    /**
+     * 记录指定用户单词的测试结果。
+     */
+    suspend fun recordTestResult(userWordId: Long, isCorrect: Boolean): Result<Unit> {
+        val userWord = userWordRepository.getUserWord(userWordId)
+            ?: return Result.failure(Exception("单词不存在"))
+        return recordTestResult(userWord, isCorrect)
     }
 
     /**

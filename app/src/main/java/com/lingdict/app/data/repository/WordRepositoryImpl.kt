@@ -26,9 +26,9 @@ class WordRepositoryImpl @Inject constructor(
     /**
      * 实现接口：搜索单词（用于自动补全）
      */
-    override fun searchWords(query: String): Flow<List<String>> {
+    override fun searchWords(query: String): Flow<List<Word>> {
         return wordDao.searchWords(query, 10).map { entities ->
-            entities.map { it.word }
+            entities.map { it.toDomainModel() }
         }
     }
 
@@ -149,6 +149,7 @@ class WordRepositoryImpl @Inject constructor(
             phonetic = phonetic,
             definition = definition,
             translation = translation,
+            level = level,
             pos = pos,
             collins = collins,
             oxford = oxford,

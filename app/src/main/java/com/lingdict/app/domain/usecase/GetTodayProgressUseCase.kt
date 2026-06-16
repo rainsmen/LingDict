@@ -24,8 +24,8 @@ class GetTodayProgressUseCase @Inject constructor(
         val record = studyRecordRepository.getRecordByDate(todayStart)
 
         emit(TodayProgress(
-            wordsLearned = record?.totalWordsLearned ?: 0,
-            wordsReviewed = record?.totalWordsReviewed ?: 0
+            wordsLearned = record?.todayProgress?.wordsLearned ?: 0,
+            wordsReviewed = record?.todayProgress?.wordsReviewed ?: 0
         ))
     }
 }

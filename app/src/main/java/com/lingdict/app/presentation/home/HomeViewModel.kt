@@ -17,7 +17,7 @@ import javax.inject.Inject
 
 data class HomeUiState(
     val searchQuery: String = "",
-    val searchResults: List<String> = emptyList(),  // 搜索结果为单词字符串列表（用于自动补全）
+    val searchResults: List<Word> = emptyList(),
     val dueWords: List<UserWord> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
@@ -54,7 +54,7 @@ class HomeViewModel @Inject constructor(
     private val _navigationEvent = MutableSharedFlow<HomeEffect>()
     val navigationEvent: SharedFlow<HomeEffect> = _navigationEvent.asSharedFlow()
 
-    private val searchResults: StateFlow<List<String>> = _searchQuery
+    private val searchResults: StateFlow<List<Word>> = _searchQuery
         .debounce(300)
         .distinctUntilChanged()
         .flatMapLatest { query ->

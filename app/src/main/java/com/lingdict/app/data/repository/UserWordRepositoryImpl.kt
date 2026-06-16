@@ -227,7 +227,7 @@ class UserWordRepositoryImpl @Inject constructor(
     /**
      * 检查单词是否已添加
      */
-    suspend fun isWordAdded(word: String): Boolean {
+    override suspend fun isWordAdded(word: String): Boolean {
         return userWordDao.isWordAdded(word)
     }
 
@@ -259,6 +259,29 @@ class UserWordRepositoryImpl @Inject constructor(
     }
 
     /**
+     * Domain模型转Entity
+     */
+    private fun UserWord.toEntity(): UserWordEntity {
+        return UserWordEntity(
+            id = id,
+            word = word.word,
+            addedDate = addedDate,
+            lastReviewDate = lastReviewDate,
+            nextReviewDate = nextReviewDate,
+            easeFactor = easeFactor,
+            interval = interval,
+            repetitions = repetitions,
+            status = status,
+            knownCount = knownCount,
+            unknownCount = unknownCount,
+            testCorrectCount = testCorrectCount,
+            testTotalCount = testTotalCount,
+            isFavorite = isFavorite,
+            notes = notes
+        )
+    }
+
+    /**
      * Entity转Domain模型
      */
     private fun UserWordEntity.toDomainModel(): UserWord {
@@ -269,6 +292,7 @@ class UserWordRepositoryImpl @Inject constructor(
                 phonetic = null,
                 definition = null,
                 translation = null,
+                level = null,
                 pos = null,
                 collins = null,
                 oxford = null,

@@ -18,6 +18,9 @@ data class Word(
     /** 中文翻译 */
     val translation: String? = null,
 
+    /** 难度等级（如 CET4、CET6、TOEFL） */
+    val level: String? = null,
+
     /** 词性 */
     val pos: String? = null,
 

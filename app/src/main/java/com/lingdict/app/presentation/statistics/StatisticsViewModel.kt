@@ -2,6 +2,7 @@ package com.lingdict.app.presentation.statistics
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lingdict.app.data.local.entity.WordStatus
 import com.lingdict.app.domain.model.StudyStatistics
 import com.lingdict.app.domain.usecase.GetStatisticsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,6 +19,7 @@ data class StatisticsUiState(
     val masteredWords: Int = 0,
     val newWords: Int = 0,
     val learningWords: Int = 0,
+    val wordDistribution: Map<WordStatus, Int> = emptyMap(),
     val isLoading: Boolean = false,
     val error: String? = null,
     val selectedPeriod: TimePeriod = TimePeriod.WEEK
@@ -90,6 +92,11 @@ class StatisticsViewModel @Inject constructor(
             masteredWords = stats?.masteryDistribution?.masteredWords ?: 0,
             newWords = stats?.masteryDistribution?.newWords ?: 0,
             learningWords = stats?.masteryDistribution?.learningWords ?: 0,
+            wordDistribution = mapOf(
+                WordStatus.NEW to (stats?.masteryDistribution?.newWords ?: 0),
+                WordStatus.LEARNING to (stats?.masteryDistribution?.learningWords ?: 0),
+                WordStatus.MASTERED to (stats?.masteryDistribution?.masteredWords ?: 0)
+            ).filterValues { it > 0 },
             isLoading = loading,
             error = error,
             selectedPeriod = period

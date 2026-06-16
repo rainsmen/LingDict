@@ -10,7 +10,7 @@ interface WordRepository {
     /**
      * 搜索单词（用于自动补全）
      */
-    fun searchWords(query: String): Flow<List<String>>
+    fun searchWords(query: String): Flow<List<Word>>
 
     /**
      * 获取单词详情

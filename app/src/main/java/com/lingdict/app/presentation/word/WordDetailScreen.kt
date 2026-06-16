@@ -183,7 +183,7 @@ fun WordDetailView(
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
 
-                if (word.phonetic.isNotEmpty()) {
+                if (!word.phonetic.isNullOrEmpty()) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -279,7 +279,7 @@ fun WordDetailView(
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = word.translation,
+                    text = word.translation.orEmpty(),
                     style = MaterialTheme.typography.bodyLarge
                 )
             }

@@ -2,6 +2,9 @@ package com.lingdict.app.data.repository
 
 import com.lingdict.app.data.local.dao.StudyRecordDao
 import com.lingdict.app.data.local.entity.StudyRecordEntity
+import com.lingdict.app.domain.model.DailyProgress
+import com.lingdict.app.domain.model.DailyRecord
+import com.lingdict.app.domain.model.MasteryDistribution
 import com.lingdict.app.domain.model.StudyStatistics
 import com.lingdict.app.domain.repository.StudyRecordRepository
 import kotlinx.coroutines.flow.Flow
@@ -127,13 +130,21 @@ class StudyRecordRepositoryImpl @Inject constructor(
     override fun getStatistics(): Flow<StudyStatistics> = flow {
         val totalDays = getTotalStudyDays()
         val totalLearned = getTotalWordsLearned()
-        val totalReviewed = getTotalWordsReviewed()
+        val today = getTodayRecord()
 
         val stats = StudyStatistics(
-            totalStudyDays = totalDays,
+            todayProgress = DailyProgress(
+                wordsLearned = today.wordsLearned,
+                wordsReviewed = today.wordsReviewed,
+                dailyGoal = 20,
+                completed = today.wordsLearned + today.wordsReviewed,
+                accuracy = if (today.testTotal > 0) today.testCorrect.toFloat() / today.testTotal else 0f
+            ),
+            recentTrend = emptyList(),
+            masteryDistribution = MasteryDistribution(0, 0, 0),
+            studyStreak = 0,
             totalWordsLearned = totalLearned,
-            totalWordsReviewed = totalReviewed,
-            studyStreak = 0 // 需要额外计算
+            totalStudyDays = totalDays
         )
         emit(stats)
     }
@@ -144,10 +155,26 @@ class StudyRecordRepositoryImpl @Inject constructor(
     override suspend fun getRecordByDate(date: Long): StudyStatistics? {
         val record = studyRecordDao.getRecordByDate(date) ?: return null
         return StudyStatistics(
-            totalStudyDays = 1,
+            todayProgress = DailyProgress(
+                wordsLearned = record.wordsLearned,
+                wordsReviewed = record.wordsReviewed,
+                dailyGoal = 20,
+                completed = record.wordsLearned + record.wordsReviewed,
+                accuracy = if (record.testTotal > 0) record.testCorrect.toFloat() / record.testTotal else 0f
+            ),
+            recentTrend = listOf(
+                DailyRecord(
+                    date = record.date,
+                    wordsLearned = record.wordsLearned,
+                    wordsReviewed = record.wordsReviewed,
+                    testCorrect = record.testCorrect,
+                    testTotal = record.testTotal
+                )
+            ),
+            masteryDistribution = MasteryDistribution(0, 0, 0),
+            studyStreak = 0,
             totalWordsLearned = record.wordsLearned,
-            totalWordsReviewed = record.wordsReviewed,
-            studyStreak = 0
+            totalStudyDays = 1
         )
     }
 

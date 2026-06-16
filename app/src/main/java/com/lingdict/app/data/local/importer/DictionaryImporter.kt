@@ -115,7 +115,6 @@ class DictionaryImporter @Inject constructor(
             val level = determineLevel(tag, fields.getOrNull(6))
 
             return WordEntity(
-                id = id.toLong(),
                 word = word,
                 phonetic = phonetic,
                 definition = definition,

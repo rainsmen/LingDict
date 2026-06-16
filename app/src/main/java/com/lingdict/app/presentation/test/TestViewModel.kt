@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.lingdict.app.domain.constants.QuestionTypes
 import com.lingdict.app.domain.model.Question
 import com.lingdict.app.domain.usecase.GenerateTestUseCase
+import com.lingdict.app.domain.usecase.UpdateReviewUseCase
 import com.lingdict.app.util.TTSManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -47,6 +48,7 @@ sealed class TestEvent {
 @HiltViewModel
 class TestViewModel @Inject constructor(
     private val generateTestUseCase: GenerateTestUseCase,
+    private val updateReviewUseCase: UpdateReviewUseCase,
     private val ttsManager: TTSManager
 ) : ViewModel() {
 
@@ -103,12 +105,26 @@ class TestViewModel @Inject constructor(
                 }
 
                 val questions = generateTestUseCase(typeString, count)
+                if (questions.isEmpty()) {
+                    _uiState.update {
+                        it.copy(
+                            testType = null,
+                            questions = emptyList(),
+                            totalQuestions = 0,
+                            currentQuestion = null,
+                            isLoading = false,
+                            error = "暂无可测试单词"
+                        )
+                    }
+                    return@launch
+                }
+
                 _uiState.update {
                     it.copy(
                         testType = type,
                         questions = questions,
                         totalQuestions = questions.size,
-                        currentQuestion = questions.firstOrNull(),
+                        currentQuestion = questions.first(),
                         currentQuestionIndex = 0,
                         isLoading = false,
                         score = 0,
@@ -119,10 +135,10 @@ class TestViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         error = exception.message ?: "生成测试失败",
-                            isLoading = false
-                        )
-                    }
+                        isLoading = false
+                    )
                 }
+            }
         }
     }
 
@@ -148,11 +164,14 @@ class TestViewModel @Inject constructor(
             )
         }
 
-        // TODO: 添加测试结果持久化
-        // 需要在 Question 模型中添加 userWordId 字段，然后调用：
-        // viewModelScope.launch {
-        //     updateReviewUseCase.recordTestResult(userWordId, isCorrect)
-        // }
+        if (currentQuestion.userWordId != 0L) {
+            viewModelScope.launch {
+                updateReviewUseCase.recordTestResult(currentQuestion.userWordId, isCorrect)
+                    .onFailure { exception ->
+                        _uiState.update { it.copy(error = exception.message ?: "测试结果保存失败") }
+                    }
+            }
+        }
     }
 
     private fun moveToNextQuestion() {

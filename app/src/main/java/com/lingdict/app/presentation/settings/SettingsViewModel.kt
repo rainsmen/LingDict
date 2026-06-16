@@ -4,14 +4,26 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lingdict.app.data.datastore.UserSettings
 import com.lingdict.app.domain.repository.SettingsRepository
+import com.lingdict.app.domain.usecase.ExportVocabularyPdfUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.io.File
 import javax.inject.Inject
+
+data class SettingsUiState(
+    val isExportingVocabulary: Boolean = false,
+    val exportError: String? = null
+)
+
+sealed class SettingsEffect {
+    data class SharePdf(val file: File) : SettingsEffect()
+}
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val exportVocabularyPdfUseCase: ExportVocabularyPdfUseCase
 ) : ViewModel() {
 
     val userSettings: StateFlow<UserSettings> = settingsRepository.getUserSettings()
@@ -20,6 +32,32 @@ class SettingsViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = UserSettings()
         )
+
+    private val _uiState = MutableStateFlow(SettingsUiState())
+    val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+
+    private val _effects = MutableSharedFlow<SettingsEffect>()
+    val effects: SharedFlow<SettingsEffect> = _effects.asSharedFlow()
+
+    fun exportVocabularyPdf() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isExportingVocabulary = true, exportError = null) }
+            exportVocabularyPdfUseCase()
+                .onSuccess { file ->
+                    _effects.emit(SettingsEffect.SharePdf(file))
+                }
+                .onFailure { exception ->
+                    _uiState.update {
+                        it.copy(exportError = exception.message ?: "导出失败")
+                    }
+                }
+            _uiState.update { it.copy(isExportingVocabulary = false) }
+        }
+    }
+
+    fun clearExportError() {
+        _uiState.update { it.copy(exportError = null) }
+    }
 
     fun updateDarkMode(enabled: Boolean) {
         viewModelScope.launch {

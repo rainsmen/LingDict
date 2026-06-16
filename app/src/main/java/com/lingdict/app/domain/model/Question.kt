@@ -7,6 +7,7 @@ sealed class Question {
     abstract val id: String
     abstract val word: String
     abstract val correctAnswer: Any  // 改为 Any 以支持不同类型的答案
+    abstract val userWordId: Long
 
     /**
      * 选择题
@@ -17,7 +18,8 @@ sealed class Question {
         val options: List<String>,             // 4个选项
         override val correctAnswer: String,    // 正确答案
         val questionText: String = "选择正确的中文释义：",
-        val phonetic: String? = null           // 音标（用于 TestScreen 显示）
+        val phonetic: String? = null,          // 音标（用于 TestScreen 显示）
+        override val userWordId: Long = 0
     ) : Question()
 
     /**
@@ -32,7 +34,8 @@ sealed class Question {
         val hint: String,                      // 提示（中文释义）
         val questionText: String = "根据释义填写缺失的字母：",
         val prompt: String = hint,             // 别名，用于 TestScreen 显示提示
-        val fullWord: String = word            // 别名，用于 TestScreen 显示完整答案
+        val fullWord: String = word,           // 别名，用于 TestScreen 显示完整答案
+        override val userWordId: Long = 0
     ) : Question()
 
     /**
@@ -44,7 +47,8 @@ sealed class Question {
         val options: List<String>,             // 4个选项
         override val correctAnswer: String,    // 正确答案
         val audioUrl: String? = null,          // 音频URL（可选）
-        val questionText: String = "听音频选择正确的单词："
+        val questionText: String = "听音频选择正确的单词：",
+        override val userWordId: Long = 0
     ) : Question()
 
     /**
@@ -58,7 +62,8 @@ sealed class Question {
         val isCorrectUsage: Boolean,           // 单词在句子中使用是否正确
         override val correctAnswer: Boolean,   // 改为 Boolean 类型
         val questionText: String = "判断句子中单词使用是否正确：",
-        val statement: String = sentence       // 别名，用于 TestScreen 显示句子
+        val statement: String = sentence,      // 别名，用于 TestScreen 显示句子
+        override val userWordId: Long = 0
     ) : Question()
 }
 

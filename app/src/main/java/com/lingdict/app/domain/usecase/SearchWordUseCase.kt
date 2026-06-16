@@ -18,7 +18,7 @@ class SearchWordUseCase @Inject constructor(
     /**
      * 搜索单词（用于自动补全）
      */
-    operator fun invoke(query: String): Flow<List<String>> {
+    operator fun invoke(query: String): Flow<List<Word>> {
         if (query.isBlank()) {
             return flowOf(emptyList())
         }

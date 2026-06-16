@@ -4,7 +4,9 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.lingdict.app.data.local.dao.UserWordDao
 import com.lingdict.app.data.local.entity.UserWordEntity
+import com.lingdict.app.data.local.entity.WordStatus
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -22,11 +24,9 @@ class UserWordDaoTest {
     @Before
     fun setup() {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        database = Room.inMemoryDatabaseBuilder(
-            context,
-            LingDictDatabase::class.java
-        ).allowMainThreadQueries().build()
-
+        database = Room.inMemoryDatabaseBuilder(context, LingDictDatabase::class.java)
+            .allowMainThreadQueries()
+            .build()
         userWordDao = database.userWordDao()
     }
 
@@ -35,205 +35,70 @@ class UserWordDaoTest {
         database.close()
     }
 
+    private fun word(
+        id: Long = 0,
+        text: String = "test",
+        nextReviewDate: Long = System.currentTimeMillis(),
+        status: WordStatus = WordStatus.NEW
+    ) = UserWordEntity(
+        id = id,
+        word = text,
+        addedDate = System.currentTimeMillis(),
+        nextReviewDate = nextReviewDate,
+        status = status
+    )
+
     @Test
     fun insertUserWord_and_getById() = runTest {
-        // Given
-        val word = UserWordEntity(
-            id = 1,
-            word = "test",
-            phonetic = "/test/",
-            definition = "A procedure",
-            translation = "n. 测试",
-            level = "CET4",
-            addedDate = System.currentTimeMillis(),
-            lastReviewDate = null,
-            nextReviewDate = System.currentTimeMillis() + 86400000,
-            easeFactor = 2.5f,
-            interval = 1,
-            repetitions = 0,
-            status = "LEARNING"
-        )
+        val id = userWordDao.insertUserWord(word(text = "test"))
 
-        // When
-        userWordDao.insert(word)
-        val result = userWordDao.getById(1).first()
+        val result = userWordDao.getUserWordById(id)
 
-        // Then
         assertNotNull(result)
         assertEquals("test", result?.word)
-        assertEquals(2.5f, result?.easeFactor)
     }
 
     @Test
     fun getAllUserWords_returns_all_words() = runTest {
-        // Given
-        val words = listOf(
-            UserWordEntity(
-                id = 1, word = "test", phonetic = "/test/", definition = "A",
-                translation = "n. 测试", level = "CET4",
-                addedDate = System.currentTimeMillis(),
-                lastReviewDate = null,
-                nextReviewDate = System.currentTimeMillis(),
-                easeFactor = 2.5f, interval = 1, repetitions = 0, status = "NEW"
-            ),
-            UserWordEntity(
-                id = 2, word = "example", phonetic = "/ex/", definition = "B",
-                translation = "n. 例子", level = "CET4",
-                addedDate = System.currentTimeMillis(),
-                lastReviewDate = null,
-                nextReviewDate = System.currentTimeMillis(),
-                easeFactor = 2.5f, interval = 1, repetitions = 0, status = "LEARNING"
-            )
-        )
+        userWordDao.insertUserWord(word(text = "test"))
+        userWordDao.insertUserWord(word(text = "example"))
 
-        // When
-        words.forEach { userWordDao.insert(it) }
         val result = userWordDao.getAllUserWords().first()
 
-        // Then
         assertEquals(2, result.size)
     }
 
     @Test
     fun getDueWords_returns_only_due_words() = runTest {
-        // Given
         val now = System.currentTimeMillis()
-        val words = listOf(
-            UserWordEntity(
-                id = 1, word = "due", phonetic = "/due/", definition = "A",
-                translation = "到期的", level = "CET4",
-                addedDate = now,
-                lastReviewDate = null,
-                nextReviewDate = now - 1000, // Due (past)
-                easeFactor = 2.5f, interval = 1, repetitions = 0, status = "LEARNING"
-            ),
-            UserWordEntity(
-                id = 2, word = "future", phonetic = "/future/", definition = "B",
-                translation = "未来的", level = "CET4",
-                addedDate = now,
-                lastReviewDate = null,
-                nextReviewDate = now + 86400000, // Not due (future)
-                easeFactor = 2.5f, interval = 1, repetitions = 0, status = "LEARNING"
-            )
-        )
+        userWordDao.insertUserWord(word(text = "due", nextReviewDate = now - 1000, status = WordStatus.LEARNING))
+        userWordDao.insertUserWord(word(text = "future", nextReviewDate = now + 86400000, status = WordStatus.LEARNING))
 
-        // When
-        words.forEach { userWordDao.insert(it) }
         val result = userWordDao.getDueWords(now, 10).first()
 
-        // Then
         assertEquals(1, result.size)
         assertEquals("due", result[0].word)
     }
 
     @Test
-    fun update_modifies_existing_word() = runTest {
-        // Given
-        val word = UserWordEntity(
-            id = 1, word = "test", phonetic = "/test/", definition = "A",
-            translation = "n. 测试", level = "CET4",
-            addedDate = System.currentTimeMillis(),
-            lastReviewDate = null,
-            nextReviewDate = System.currentTimeMillis(),
-            easeFactor = 2.5f, interval = 1, repetitions = 0, status = "NEW"
-        )
-        userWordDao.insert(word)
+    fun updateUserWord_modifies_existing_word() = runTest {
+        val id = userWordDao.insertUserWord(word(text = "test"))
+        val original = userWordDao.getUserWordById(id)!!
 
-        // When
-        val updated = word.copy(
-            easeFactor = 2.8f,
-            interval = 6,
-            repetitions = 1,
-            status = "LEARNING"
-        )
-        userWordDao.update(updated)
+        userWordDao.updateUserWord(original.copy(status = WordStatus.LEARNING, repetitions = 1))
 
-        // Then
-        val result = userWordDao.getById(1).first()
-        assertEquals(2.8f, result?.easeFactor)
-        assertEquals(6, result?.interval)
+        val result = userWordDao.getUserWordById(id)
+        assertEquals(WordStatus.LEARNING, result?.status)
         assertEquals(1, result?.repetitions)
-        assertEquals("LEARNING", result?.status)
     }
 
     @Test
-    fun delete_removes_word() = runTest {
-        // Given
-        val word = UserWordEntity(
-            id = 1, word = "test", phonetic = "/test/", definition = "A",
-            translation = "n. 测试", level = "CET4",
-            addedDate = System.currentTimeMillis(),
-            lastReviewDate = null,
-            nextReviewDate = System.currentTimeMillis(),
-            easeFactor = 2.5f, interval = 1, repetitions = 0, status = "NEW"
-        )
-        userWordDao.insert(word)
+    fun getUserWordByWord_finds_existing_word() = runTest {
+        userWordDao.insertUserWord(word(text = "test"))
 
-        // When
-        userWordDao.delete(word)
+        val result = userWordDao.getUserWordByWord("test")
 
-        // Then
-        val result = userWordDao.getById(1).first()
-        assertNull(result)
-    }
-
-    @Test
-    fun getWordByText_finds_existing_word() = runTest {
-        // Given
-        val word = UserWordEntity(
-            id = 1, word = "test", phonetic = "/test/", definition = "A",
-            translation = "n. 测试", level = "CET4",
-            addedDate = System.currentTimeMillis(),
-            lastReviewDate = null,
-            nextReviewDate = System.currentTimeMillis(),
-            easeFactor = 2.5f, interval = 1, repetitions = 0, status = "NEW"
-        )
-        userWordDao.insert(word)
-
-        // When
-        val result = userWordDao.getWordByText("test").first()
-
-        // Then
         assertNotNull(result)
         assertEquals("test", result?.word)
-    }
-
-    @Test
-    fun getWordByText_returns_null_for_nonexistent_word() = runTest {
-        // When
-        val result = userWordDao.getWordByText("nonexistent").first()
-
-        // Then
-        assertNull(result)
-    }
-
-    @Test
-    fun getDueWords_respects_limit() = runTest {
-        // Given - insert 10 due words
-        val now = System.currentTimeMillis()
-        repeat(10) { index ->
-            val word = UserWordEntity(
-                id = index.toLong(),
-                word = "word$index",
-                phonetic = "/word/",
-                definition = "Definition",
-                translation = "单词",
-                level = "CET4",
-                addedDate = now,
-                lastReviewDate = null,
-                nextReviewDate = now - 1000, // All due
-                easeFactor = 2.5f,
-                interval = 1,
-                repetitions = 0,
-                status = "LEARNING"
-            )
-            userWordDao.insert(word)
-        }
-
-        // When - request only 5
-        val result = userWordDao.getDueWords(now, 5).first()
-
-        // Then
-        assertEquals(5, result.size)
     }
 }

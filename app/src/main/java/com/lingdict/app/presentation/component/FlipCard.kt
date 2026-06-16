@@ -160,7 +160,7 @@ private fun CardBack(word: Word) {
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = word.translation,
+                text = word.translation.orEmpty(),
                 style = MaterialTheme.typography.bodyLarge
             )
         }

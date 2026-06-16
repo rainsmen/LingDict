@@ -1,5 +1,6 @@
 package com.lingdict.app.presentation.settings
 
+import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -7,9 +8,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
@@ -22,9 +26,37 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val userSettings by viewModel.userSettings.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        viewModel.effects.collect { effect ->
+            when (effect) {
+                is SettingsEffect.SharePdf -> {
+                    val uri = FileProvider.getUriForFile(
+                        context,
+                        "${context.packageName}.fileprovider",
+                        effect.file
+                    )
+                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "application/pdf"
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    context.startActivity(
+                        Intent.createChooser(shareIntent, "分享生词库 PDF")
+                    )
+                }
+            }
+        }
+    }
 
     SettingsContent(
         userSettings = userSettings,
+        isExportingVocabulary = uiState.isExportingVocabulary,
+        exportError = uiState.exportError,
+        onExportVocabulary = viewModel::exportVocabularyPdf,
+        onDismissExportError = viewModel::clearExportError,
         onDarkModeChange = viewModel::updateDarkMode,
         onNotificationsChange = viewModel::updateNotifications,
         onDailyLearningGoalChange = viewModel::updateDailyLearningGoal,
@@ -39,6 +71,10 @@ fun SettingsScreen(
 @Composable
 fun SettingsContent(
     userSettings: UserSettings,
+    isExportingVocabulary: Boolean = false,
+    exportError: String? = null,
+    onExportVocabulary: () -> Unit = {},
+    onDismissExportError: () -> Unit = {},
     onDarkModeChange: (Boolean) -> Unit = {},
     onNotificationsChange: (Boolean) -> Unit = {},
     onDailyLearningGoalChange: (Int) -> Unit = {},
@@ -47,6 +83,14 @@ fun SettingsContent(
     onShowPhoneticChange: (Boolean) -> Unit = {},
     onCardBackgroundChange: (Boolean) -> Unit = {}
 ) {
+    var learningGoalDialogVisible by remember { mutableStateOf(false) }
+    var reviewGoalDialogVisible by remember { mutableStateOf(false) }
+    var learningGoalText by remember(userSettings.dailyLearningGoal) {
+        mutableStateOf(userSettings.dailyLearningGoal.toString())
+    }
+    var reviewGoalText by remember(userSettings.dailyReviewGoal) {
+        mutableStateOf(userSettings.dailyReviewGoal.toString())
+    }
 
     Scaffold(
         topBar = {
@@ -96,13 +140,13 @@ fun SettingsContent(
                     icon = Icons.Default.School,
                     title = "每日学习目标",
                     subtitle = "${userSettings.dailyLearningGoal}个新单词",
-                    onClick = { /* TODO: Show dialog to change */ }
+                    onClick = { learningGoalDialogVisible = true }
                 )
                 SettingsItem(
                     icon = Icons.Default.Refresh,
                     title = "每日复习目标",
                     subtitle = "${userSettings.dailyReviewGoal}个复习单词",
-                    onClick = { /* TODO: Show dialog to change */ }
+                    onClick = { reviewGoalDialogVisible = true }
                 )
                 SettingsSwitch(
                     icon = Icons.Default.VolumeUp,
@@ -129,23 +173,103 @@ fun SettingsContent(
 
             Divider()
 
+            // Data Section
+            SettingsSection(title = "数据") {
+                SettingsItem(
+                    icon = Icons.Default.PictureAsPdf,
+                    title = "导出生词库",
+                    subtitle = if (isExportingVocabulary) "正在生成 PDF..." else "生成并分享 PDF 文件",
+                    enabled = !isExportingVocabulary,
+                    onClick = onExportVocabulary
+                )
+            }
+
+            Divider()
+
             // About Section
             SettingsSection(title = "关于") {
                 SettingsItem(
                     icon = Icons.Default.Info,
                     title = "版本信息",
                     subtitle = "v1.0.0",
-                    onClick = { /* TODO */ }
+                    onClick = { }
                 )
                 SettingsItem(
                     icon = Icons.Default.Description,
                     title = "开源许可",
-                    subtitle = "查看开源许可信息",
-                    onClick = { /* TODO */ }
+                    subtitle = "MIT License",
+                    onClick = { }
                 )
             }
         }
     }
+
+    if (learningGoalDialogVisible) {
+        GoalDialog(
+            title = "每日学习目标",
+            value = learningGoalText,
+            onValueChange = { learningGoalText = it },
+            onDismiss = { learningGoalDialogVisible = false },
+            onConfirm = {
+                learningGoalText.toIntOrNull()?.takeIf { it > 0 }?.let(onDailyLearningGoalChange)
+                learningGoalDialogVisible = false
+            }
+        )
+    }
+
+    if (exportError != null) {
+        AlertDialog(
+            onDismissRequest = onDismissExportError,
+            title = { Text("导出失败") },
+            text = { Text(exportError) },
+            confirmButton = {
+                TextButton(onClick = onDismissExportError) { Text("确定") }
+            }
+        )
+    }
+
+    if (reviewGoalDialogVisible) {
+        GoalDialog(
+            title = "每日复习目标",
+            value = reviewGoalText,
+            onValueChange = { reviewGoalText = it },
+            onDismiss = { reviewGoalDialogVisible = false },
+            onConfirm = {
+                reviewGoalText.toIntOrNull()?.takeIf { it > 0 }?.let(onDailyReviewGoalChange)
+                reviewGoalDialogVisible = false
+            }
+        )
+    }
+}
+
+@Composable
+private fun GoalDialog(
+    title: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            OutlinedTextField(
+                value = value,
+                onValueChange = { input -> onValueChange(input.filter { it.isDigit() }.take(3)) },
+                singleLine = true,
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                    keyboardType = KeyboardType.Number
+                )
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) { Text("保存") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("取消") }
+        }
+    )
 }
 
 @Composable
@@ -173,10 +297,12 @@ fun SettingsItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     subtitle: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    enabled: Boolean = true
 ) {
     Surface(
         onClick = onClick,
+        enabled = enabled,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -188,7 +314,11 @@ fun SettingsItem(
             Icon(
                 imageVector = icon,
                 contentDescription = title,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                tint = if (enabled) {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                }
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {

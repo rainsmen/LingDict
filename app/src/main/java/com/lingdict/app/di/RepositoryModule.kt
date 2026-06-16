@@ -1,10 +1,12 @@
 package com.lingdict.app.di
 
 import com.lingdict.app.data.repository.PexelsRepositoryImpl
+import com.lingdict.app.data.repository.SettingsRepositoryImpl
 import com.lingdict.app.data.repository.StudyRecordRepositoryImpl
 import com.lingdict.app.data.repository.UserWordRepositoryImpl
 import com.lingdict.app.data.repository.WordRepositoryImpl
 import com.lingdict.app.domain.repository.PexelsRepository
+import com.lingdict.app.domain.repository.SettingsRepository
 import com.lingdict.app.domain.repository.StudyRecordRepository
 import com.lingdict.app.domain.repository.UserWordRepository
 import com.lingdict.app.domain.repository.WordRepository
@@ -39,6 +41,12 @@ abstract class RepositoryModule {
     abstract fun bindStudyRecordRepository(
         impl: StudyRecordRepositoryImpl
     ): StudyRecordRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindSettingsRepository(
+        impl: SettingsRepositoryImpl
+    ): SettingsRepository
 
     @Binds
     @Singleton

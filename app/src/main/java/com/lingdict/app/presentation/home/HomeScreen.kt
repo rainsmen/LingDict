@@ -17,7 +17,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.lingdict.app.domain.model.UserWord
 import com.lingdict.app.domain.model.Word
-import com.lingdict.app.domain.model.WordStatus
+import com.lingdict.app.data.local.entity.WordStatus
 import com.lingdict.app.presentation.component.CircularProgressWithLabel
 import com.lingdict.app.presentation.component.SearchBar
 import com.lingdict.app.presentation.component.WordCard
@@ -110,7 +110,7 @@ fun HomeContent(
                 items(uiState.searchResults) { word ->
                     WordCard(
                         word = word.word,
-                        translation = word.translation,
+                        translation = word.translation.orEmpty(),
                         phonetic = word.phonetic,
                         level = word.level,
                         onClick = { onEvent(HomeEvent.WordSelected(word.word)) }
@@ -147,9 +147,9 @@ fun HomeContent(
 
                     items(uiState.dueWords.take(5)) { userWord ->
                         WordCard(
-                            word = userWord.word,
-                            translation = userWord.translation,
-                            phonetic = userWord.phonetic,
+                            word = userWord.word.word,
+                            translation = userWord.word.translation.orEmpty(),
+                            phonetic = userWord.word.phonetic,
                             status = userWord.status,
                             onClick = onNavigateToLearn
                         )
@@ -258,11 +258,13 @@ fun HomeScreenPreview() {
                 dueWords = listOf(
                     UserWord(
                         id = 1,
-                        word = "dictionary",
-                        phonetic = "/ˈdɪkʃəneri/",
-                        definition = "A book or electronic resource",
-                        translation = "n. 字典；词典",
-                        level = "CET4",
+                        word = Word(
+                            word = "dictionary",
+                            phonetic = "/ˈdɪkʃəneri/",
+                            definition = "A book or electronic resource",
+                            translation = "n. 字典；词典",
+                            level = "CET4"
+                        ),
                         addedDate = System.currentTimeMillis(),
                         lastReviewDate = null,
                         nextReviewDate = System.currentTimeMillis(),

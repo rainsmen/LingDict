@@ -17,6 +17,7 @@ import sqlite3
 import os
 import sys
 import re
+import time
 
 
 def clean_text(text):
@@ -123,23 +124,77 @@ def process_ecdict(csv_path, output_db_path, limit=50000):
     conn = sqlite3.connect(output_db_path)
     cursor = conn.cursor()
 
-    # 创建words表（与WordEntity结构一致）
-    cursor.execute('''
-        CREATE TABLE words (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            word TEXT NOT NULL UNIQUE,
-            phonetic TEXT NOT NULL DEFAULT '',
-            definition TEXT NOT NULL DEFAULT '',
-            translation TEXT NOT NULL DEFAULT '',
-            level TEXT,
-            frequency INTEGER DEFAULT 0
-        )
-    ''')
+    cursor.execute('PRAGMA user_version=2')
 
-    # 创建索引
-    cursor.execute('CREATE INDEX idx_word ON words(word)')
-    cursor.execute('CREATE INDEX idx_frequency ON words(frequency DESC)')
-    cursor.execute('CREATE INDEX idx_level ON words(level)')
+    # 创建表（与当前 Room schema 保持一致）
+    cursor.executescript('''
+        CREATE TABLE words (
+            word TEXT NOT NULL,
+            phonetic TEXT,
+            phoneticUs TEXT,
+            phoneticUk TEXT,
+            definition TEXT NOT NULL,
+            translation TEXT NOT NULL,
+            level TEXT,
+            frequency INTEGER NOT NULL,
+            exchange TEXT,
+            collins INTEGER,
+            bnc INTEGER,
+            frq INTEGER,
+            tag TEXT,
+            addedTime INTEGER NOT NULL,
+            pos TEXT,
+            oxford INTEGER,
+            detail TEXT,
+            audio TEXT,
+            PRIMARY KEY(word)
+        );
+        CREATE INDEX index_words_word ON words(word);
+
+        CREATE TABLE user_words (
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+            word TEXT NOT NULL,
+            addedDate INTEGER NOT NULL,
+            lastReviewDate INTEGER,
+            nextReviewDate INTEGER NOT NULL,
+            easeFactor REAL NOT NULL,
+            interval INTEGER NOT NULL,
+            repetitions INTEGER NOT NULL,
+            status TEXT NOT NULL,
+            knownCount INTEGER NOT NULL,
+            unknownCount INTEGER NOT NULL,
+            testCorrectCount INTEGER NOT NULL,
+            testTotalCount INTEGER NOT NULL,
+            isFavorite INTEGER NOT NULL,
+            notes TEXT
+        );
+        CREATE INDEX index_user_words_word ON user_words(word);
+        CREATE INDEX index_user_words_nextReviewDate ON user_words(nextReviewDate);
+        CREATE INDEX index_user_words_status ON user_words(status);
+
+        CREATE TABLE examples (
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+            word TEXT NOT NULL,
+            sentenceEn TEXT NOT NULL,
+            sentenceZh TEXT NOT NULL,
+            source TEXT,
+            audioUrl TEXT,
+            FOREIGN KEY(word) REFERENCES words(word) ON UPDATE NO ACTION ON DELETE CASCADE
+        );
+        CREATE INDEX index_examples_word ON examples(word);
+
+        CREATE TABLE study_records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+            date INTEGER NOT NULL,
+            wordsLearned INTEGER NOT NULL,
+            wordsReviewed INTEGER NOT NULL,
+            testCorrect INTEGER NOT NULL,
+            testTotal INTEGER NOT NULL,
+            studyDuration INTEGER NOT NULL,
+            createdAt INTEGER NOT NULL
+        );
+        CREATE UNIQUE INDEX index_study_records_date ON study_records(date);
+    ''')
 
     conn.commit()
     print("✅ 数据库表创建完成")
@@ -189,11 +244,12 @@ def process_ecdict(csv_path, output_db_path, limit=50000):
 
                 words_data.append({
                     'word': word,
-                    'phonetic': phonetic,
+                    'phonetic': phonetic or None,
                     'definition': definition,
                     'translation': translation,
                     'level': level,
-                    'frequency': frequency
+                    'frequency': frequency,
+                    'addedTime': int(time.time() * 1000)
                 })
 
         print(f"   已读取: {total_read:,} 条")
@@ -244,8 +300,11 @@ def process_ecdict(csv_path, output_db_path, limit=50000):
         for i in range(0, total, batch_size):
             batch = words_data[i:i+batch_size]
             cursor.executemany('''
-                INSERT OR IGNORE INTO words (word, phonetic, definition, translation, level, frequency)
-                VALUES (:word, :phonetic, :definition, :translation, :level, :frequency)
+                INSERT OR IGNORE INTO words (
+                    word, phonetic, definition, translation, level, frequency, addedTime
+                ) VALUES (
+                    :word, :phonetic, :definition, :translation, :level, :frequency, :addedTime
+                )
             ''', batch)
 
             conn.commit()

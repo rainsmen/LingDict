@@ -31,4 +31,9 @@ interface UserWordRepository {
      * 获取所有生词
      */
     fun getAllUserWords(): Flow<List<UserWord>>
+
+    /**
+     * 检查单词是否已添加
+     */
+    suspend fun isWordAdded(word: String): Boolean
 }

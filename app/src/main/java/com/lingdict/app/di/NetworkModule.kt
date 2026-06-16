@@ -1,5 +1,6 @@
 package com.lingdict.app.di
 
+import com.lingdict.app.BuildConfig
 import com.lingdict.app.data.remote.PexelsApiService
 import com.lingdict.app.data.remote.YoudaoApiService
 import dagger.Module
