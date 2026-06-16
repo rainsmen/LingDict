@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lingdict.app.domain.model.Question
 import com.lingdict.app.domain.usecase.GenerateTestUseCase
+import com.lingdict.app.util.TTSManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -44,7 +45,8 @@ sealed class TestEvent {
 
 @HiltViewModel
 class TestViewModel @Inject constructor(
-    private val generateTestUseCase: GenerateTestUseCase
+    private val generateTestUseCase: GenerateTestUseCase,
+    private val ttsManager: TTSManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TestUiState())
@@ -75,7 +77,10 @@ class TestViewModel @Inject constructor(
             }
 
             is TestEvent.PlayAudio -> {
-                // TODO: Implement TTS audio playback
+                val currentQuestion = _uiState.value.currentQuestion
+                if (currentQuestion is Question.Listening && ttsManager.isAvailable()) {
+                    ttsManager.speak(currentQuestion.audioWord)
+                }
             }
 
             is TestEvent.ClearError -> {

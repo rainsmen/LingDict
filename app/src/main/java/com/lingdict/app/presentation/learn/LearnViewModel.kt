@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.lingdict.app.domain.model.UserWord
 import com.lingdict.app.domain.usecase.GetDueWordsUseCase
 import com.lingdict.app.domain.usecase.UpdateReviewUseCase
+import com.lingdict.app.util.TTSManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -32,7 +33,8 @@ sealed class LearnEvent {
 @HiltViewModel
 class LearnViewModel @Inject constructor(
     private val getDueWordsUseCase: GetDueWordsUseCase,
-    private val updateReviewUseCase: UpdateReviewUseCase
+    private val updateReviewUseCase: UpdateReviewUseCase,
+    private val ttsManager: TTSManager
 ) : ViewModel() {
 
     private val _isFlipped = MutableStateFlow(false)
@@ -102,7 +104,12 @@ class LearnViewModel @Inject constructor(
             }
 
             is LearnEvent.PlayAudio -> {
-                // TODO: Implement TTS audio playback
+                val currentWord = uiState.value.currentWord
+                if (currentWord != null && ttsManager.isAvailable()) {
+                    ttsManager.speak(currentWord.word)
+                } else if (!ttsManager.isAvailable()) {
+                    _error.value = "语音功能不可用，请检查TTS设置"
+                }
             }
 
             is LearnEvent.ClearError -> {

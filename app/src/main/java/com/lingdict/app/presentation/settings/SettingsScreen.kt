@@ -9,17 +9,44 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.lingdict.app.data.datastore.UserSettings
 import com.lingdict.app.presentation.theme.LingDictTheme
+
+@Composable
+fun SettingsScreen(
+    navController: NavController,
+    viewModel: SettingsViewModel = hiltViewModel()
+) {
+    val userSettings by viewModel.userSettings.collectAsStateWithLifecycle()
+
+    SettingsContent(
+        userSettings = userSettings,
+        onDarkModeChange = viewModel::updateDarkMode,
+        onNotificationsChange = viewModel::updateNotifications,
+        onDailyLearningGoalChange = viewModel::updateDailyLearningGoal,
+        onDailyReviewGoalChange = viewModel::updateDailyReviewGoal,
+        onAutoPlayAudioChange = viewModel::updateAutoPlayAudio,
+        onShowPhoneticChange = viewModel::updateShowPhonetic,
+        onCardBackgroundChange = viewModel::updateCardBackground
+    )
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(
-    navController: NavController
+fun SettingsContent(
+    userSettings: UserSettings,
+    onDarkModeChange: (Boolean) -> Unit = {},
+    onNotificationsChange: (Boolean) -> Unit = {},
+    onDailyLearningGoalChange: (Int) -> Unit = {},
+    onDailyReviewGoalChange: (Int) -> Unit = {},
+    onAutoPlayAudioChange: (Boolean) -> Unit = {},
+    onShowPhoneticChange: (Boolean) -> Unit = {},
+    onCardBackgroundChange: (Boolean) -> Unit = {}
 ) {
-    var darkMode by remember { mutableStateOf(false) }
-    var notificationsEnabled by remember { mutableStateOf(true) }
 
     Scaffold(
         topBar = {
@@ -43,8 +70,8 @@ fun SettingsScreen(
                     icon = Icons.Default.DarkMode,
                     title = "深色模式",
                     subtitle = "使用深色主题",
-                    checked = darkMode,
-                    onCheckedChange = { darkMode = it }
+                    checked = userSettings.darkMode,
+                    onCheckedChange = onDarkModeChange
                 )
             }
 
@@ -56,8 +83,8 @@ fun SettingsScreen(
                     icon = Icons.Default.Notifications,
                     title = "学习提醒",
                     subtitle = "每日学习提醒通知",
-                    checked = notificationsEnabled,
-                    onCheckedChange = { notificationsEnabled = it }
+                    checked = userSettings.notificationsEnabled,
+                    onCheckedChange = onNotificationsChange
                 )
             }
 
@@ -68,14 +95,35 @@ fun SettingsScreen(
                 SettingsItem(
                     icon = Icons.Default.School,
                     title = "每日学习目标",
-                    subtitle = "20个新单词",
-                    onClick = { /* TODO */ }
+                    subtitle = "${userSettings.dailyLearningGoal}个新单词",
+                    onClick = { /* TODO: Show dialog to change */ }
                 )
                 SettingsItem(
                     icon = Icons.Default.Refresh,
                     title = "每日复习目标",
-                    subtitle = "30个复习单词",
-                    onClick = { /* TODO */ }
+                    subtitle = "${userSettings.dailyReviewGoal}个复习单词",
+                    onClick = { /* TODO: Show dialog to change */ }
+                )
+                SettingsSwitch(
+                    icon = Icons.Default.VolumeUp,
+                    title = "自动播放发音",
+                    subtitle = "查看单词时自动播放发音",
+                    checked = userSettings.autoPlayAudio,
+                    onCheckedChange = onAutoPlayAudioChange
+                )
+                SettingsSwitch(
+                    icon = Icons.Default.TextFields,
+                    title = "显示音标",
+                    subtitle = "在卡片上显示音标",
+                    checked = userSettings.showPhonetic,
+                    onCheckedChange = onShowPhoneticChange
+                )
+                SettingsSwitch(
+                    icon = Icons.Default.Image,
+                    title = "卡片背景图片",
+                    subtitle = "显示单词助记图片",
+                    checked = userSettings.cardBackgroundEnabled,
+                    onCheckedChange = onCardBackgroundChange
                 )
             }
 
@@ -204,6 +252,16 @@ fun SettingsSwitch(
 @Composable
 fun SettingsScreenPreview() {
     LingDictTheme {
-        SettingsScreen(navController = rememberNavController())
+        SettingsContent(
+            userSettings = UserSettings(
+                darkMode = false,
+                notificationsEnabled = true,
+                dailyLearningGoal = 20,
+                dailyReviewGoal = 30,
+                autoPlayAudio = false,
+                showPhonetic = true,
+                cardBackgroundEnabled = true
+            )
+        )
     }
 }

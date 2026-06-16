@@ -7,6 +7,7 @@ import com.lingdict.app.domain.model.Word
 import com.lingdict.app.domain.usecase.AddUserWordUseCase
 import com.lingdict.app.domain.usecase.GetDueWordsUseCase
 import com.lingdict.app.domain.usecase.SearchWordUseCase
+import com.lingdict.app.util.TTSManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
@@ -27,6 +28,7 @@ sealed class HomeEvent {
     data class SearchQueryChanged(val query: String) : HomeEvent()
     data class WordSelected(val word: String) : HomeEvent()
     data class AddToLibrary(val word: String) : HomeEvent()
+    data class PlayAudio(val word: String) : HomeEvent()
     object ClearError : HomeEvent()
 }
 
@@ -35,7 +37,8 @@ sealed class HomeEvent {
 class HomeViewModel @Inject constructor(
     private val searchWordUseCase: SearchWordUseCase,
     private val getDueWordsUseCase: GetDueWordsUseCase,
-    private val addUserWordUseCase: AddUserWordUseCase
+    private val addUserWordUseCase: AddUserWordUseCase,
+    private val ttsManager: TTSManager
 ) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")
@@ -93,6 +96,14 @@ class HomeViewModel @Inject constructor(
 
             is HomeEvent.AddToLibrary -> {
                 addWordToLibrary(event.word)
+            }
+
+            is HomeEvent.PlayAudio -> {
+                if (ttsManager.isAvailable()) {
+                    ttsManager.speak(event.word)
+                } else {
+                    _error.value = "语音功能不可用"
+                }
             }
 
             is HomeEvent.ClearError -> {
