@@ -31,10 +31,23 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    // Handle navigation events
+    LaunchedEffect(Unit) {
+        viewModel.navigationEvent.collect { effect ->
+            when (effect) {
+                is HomeEffect.NavigateToWordDetail -> {
+                    navController.navigate(
+                        com.lingdict.app.presentation.navigation.Screen.WordDetail.createRoute(effect.word)
+                    )
+                }
+            }
+        }
+    }
+
     HomeContent(
         uiState = uiState,
         onEvent = viewModel::onEvent,
-        onNavigateToLearn = { navController.navigate(Screen.Learn.route) }
+        onNavigateToLearn = { navController.navigate(com.lingdict.app.presentation.navigation.Screen.Learn.route) }
     )
 
     // Show error snackbar

@@ -32,6 +32,10 @@ sealed class HomeEvent {
     object ClearError : HomeEvent()
 }
 
+data class HomeEffect {
+    data class NavigateToWordDetail(val word: String) : HomeEffect()
+}
+
 @OptIn(FlowPreview::class)
 @HiltViewModel
 class HomeViewModel @Inject constructor(
@@ -44,6 +48,9 @@ class HomeViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
     private val _error = MutableStateFlow<String?>(null)
     private val _isLoading = MutableStateFlow(false)
+
+    private val _navigationEvent = MutableSharedFlow<HomeEffect>()
+    val navigationEvent: SharedFlow<HomeEffect> = _navigationEvent.asSharedFlow()
 
     private val searchResults: StateFlow<List<Word>> = _searchQuery
         .debounce(300)
@@ -91,7 +98,9 @@ class HomeViewModel @Inject constructor(
             }
 
             is HomeEvent.WordSelected -> {
-                // Handle word selection - could navigate to detail screen
+                viewModelScope.launch {
+                    _navigationEvent.emit(HomeEffect.NavigateToWordDetail(event.word))
+                }
             }
 
             is HomeEvent.AddToLibrary -> {

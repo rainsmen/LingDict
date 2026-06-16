@@ -15,9 +15,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import androidx.navigation.NavType
 import com.lingdict.app.presentation.home.HomeScreen
 import com.lingdict.app.presentation.learn.LearnScreen
 import com.lingdict.app.presentation.settings.SettingsScreen
+import com.lingdict.app.presentation.word.WordDetailScreen
 
 sealed class BottomNavItem(
     val route: String,
@@ -97,6 +100,13 @@ fun LingDictApp() {
 
             composable(Screen.Settings.route) {
                 SettingsScreen(navController = navController)
+            }
+
+            composable(
+                route = Screen.WordDetail.route,
+                arguments = listOf(navArgument("word") { type = NavType.StringType })
+            ) {
+                WordDetailScreen(navController = navController)
             }
         }
     }
