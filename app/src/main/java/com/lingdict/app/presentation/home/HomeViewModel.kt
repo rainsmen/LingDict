@@ -6,6 +6,7 @@ import com.lingdict.app.domain.model.UserWord
 import com.lingdict.app.domain.model.Word
 import com.lingdict.app.domain.usecase.AddUserWordUseCase
 import com.lingdict.app.domain.usecase.GetDueWordsUseCase
+import com.lingdict.app.domain.usecase.GetTodayProgressUseCase
 import com.lingdict.app.domain.usecase.SearchWordUseCase
 import com.lingdict.app.util.TTSManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -42,6 +43,7 @@ class HomeViewModel @Inject constructor(
     private val searchWordUseCase: SearchWordUseCase,
     private val getDueWordsUseCase: GetDueWordsUseCase,
     private val addUserWordUseCase: AddUserWordUseCase,
+    private val getTodayProgressUseCase: GetTodayProgressUseCase,
     private val ttsManager: TTSManager
 ) : ViewModel() {
 
@@ -69,21 +71,26 @@ class HomeViewModel @Inject constructor(
         .catch { emit(emptyList()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    private val todayProgress = getTodayProgressUseCase()
+        .catch { emit(com.lingdict.app.domain.usecase.TodayProgress()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.lingdict.app.domain.usecase.TodayProgress())
+
     val uiState: StateFlow<HomeUiState> = combine(
         _searchQuery,
         searchResults,
         dueWords,
         _isLoading,
-        _error
-    ) { query, results, due, loading, error ->
+        _error,
+        todayProgress
+    ) { query, results, due, loading, error, progress ->
         HomeUiState(
             searchQuery = query,
             searchResults = results,
             dueWords = due,
             isLoading = loading,
             error = error,
-            todayLearned = 0, // TODO: Calculate from today's records
-            todayReviewed = 0  // TODO: Calculate from today's records
+            todayLearned = progress.wordsLearned,
+            todayReviewed = progress.wordsReviewed
         )
     }.stateIn(
         viewModelScope,

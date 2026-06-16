@@ -131,15 +131,18 @@ class StatisticsViewModel @Inject constructor(
             TimePeriod.YEAR -> 365
         }
 
-        // Generate mock data for demonstration
-        // In real app, this would come from the database
+        // Use real data from statistics if available
         return (0 until days).map { dayOffset ->
+            val date = LocalDate.now().minusDays(dayOffset.toLong())
+
+            // In a real implementation, you would query StudyRecordRepository for each date
+            // For now, we'll use the statistics data if available
             DailyRecord(
-                date = LocalDate.now().minusDays(dayOffset.toLong()),
-                wordsLearned = if (dayOffset < 7) (5..15).random() else 0,
-                wordsReviewed = if (dayOffset < 7) (10..25).random() else 0,
-                testsCompleted = if (dayOffset < 7) (0..3).random() else 0,
-                accuracy = if (dayOffset < 7) (0.6f..0.95f).random() else 0f
+                date = date,
+                wordsLearned = if (stats != null && dayOffset == 0) stats.newWords else 0,
+                wordsReviewed = if (stats != null && dayOffset == 0) stats.learningWords else 0,
+                testsCompleted = 0,
+                accuracy = 0f
             )
         }.reversed()
     }
