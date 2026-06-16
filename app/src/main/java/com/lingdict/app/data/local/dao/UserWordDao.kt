@@ -6,6 +6,14 @@ import com.lingdict.app.data.local.entity.WordStatus
 import kotlinx.coroutines.flow.Flow
 
 /**
+ * 状态统计结果
+ */
+data class StatusCount(
+    val status: WordStatus,
+    val count: Int
+)
+
+/**
  * 用户生词库数据访问对象
  */
 @Dao
@@ -65,7 +73,7 @@ interface UserWordDao {
      * 统计各状态单词数量
      */
     @Query("SELECT status, COUNT(*) as count FROM user_words GROUP BY status")
-    fun getStatusCounts(): Flow<Map<WordStatus, Int>>
+    fun getStatusCounts(): Flow<List<StatusCount>>
 
     /**
      * 获取待复习单词数量
