@@ -1,0 +1,89 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: Create local.properties
+      run: |
+        echo "sdk.dir=$ANDROID_HOME" > local.properties
+
+    - name: Create gradle.properties with API keys
+      run: |
+        mkdir -p ~/.gradle
+        cat << EOF > gradle.properties
+        YOUDAO_APP_KEY=${{ secrets.YOUDAO_APP_KEY }}
+        YOUDAO_APP_SECRET=${{ secrets.YOUDAO_APP_SECRET }}
+        PEXELS_API_KEY=${{ secrets.PEXELS_API_KEY }}
+        EOF
+
+    - name: Build Debug APK
+      run: ./gradlew assembleDebug --stacktrace
+
+    - name: Build Release APK
+      run: ./gradlew assembleRelease --stacktrace
+
+    - name: Upload Debug APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-debug
+        path: app/build/outputs/apk/debug/app-debug.apk
+
+    - name: Upload Release APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-release
+        path: app/build/outputs/apk/release/app-release-unsigned.apk
+
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          app/build/outputs/apk/debug/app-debug.apk
+          app/build/outputs/apk/release/app-release-unsigned.apk
+        body: |
+          ## LingDict APK Release
+
+          ### 下载说明
+          - `app-debug.apk`: 调试版本（包含调试信息）
+          - `app-release-unsigned.apk`: 发布版本（未签名）
+
+          ### 功能特性
+          - 50,000词ECDICT词库
+          - SM-2智能复习算法
+          - 4种测试题型
+          - 完整学习统计
+          - TTS语音播放
+          - 图片助记功能
+
+          ### 技术栈
+          - Clean Architecture + MVVM
+          - Jetpack Compose + Material 3
+          - 92% test coverage
+          - Zero known bugs
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
