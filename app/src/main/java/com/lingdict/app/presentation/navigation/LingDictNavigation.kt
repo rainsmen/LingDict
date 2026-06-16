@@ -88,13 +88,11 @@ fun LingDictApp() {
             }
 
             composable(Screen.Test.route) {
-                // TestScreen will be implemented
-                Text("Test Screen - Coming Soon")
+                com.lingdict.app.presentation.test.TestScreen(navController = navController)
             }
 
             composable(Screen.Statistics.route) {
-                // StatisticsScreen will be implemented
-                Text("Statistics Screen - Coming Soon")
+                com.lingdict.app.presentation.statistics.StatisticsScreen(navController = navController)
             }
 
             composable(Screen.Settings.route) {
