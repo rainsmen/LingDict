@@ -1,6 +1,7 @@
 package com.lingdict.app.presentation.navigation
 
 sealed class Screen(val route: String) {
+    object Splash : Screen("splash")
     object Home : Screen("home")
     object Learn : Screen("learn")
     object Test : Screen("test")

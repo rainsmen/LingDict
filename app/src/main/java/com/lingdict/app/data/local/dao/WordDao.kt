@@ -55,6 +55,12 @@ interface WordDao {
     suspend fun insertWords(words: List<WordEntity>)
 
     /**
+     * 批量插入（别名，用于DictionaryImporter）
+     */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(words: List<WordEntity>)
+
+    /**
      * 更新单词
      */
     @Update
