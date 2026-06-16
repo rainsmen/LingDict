@@ -1,0 +1,7 @@
+# API Keys (请填写你的API密钥)
+YOUDAO_APP_KEY=your_youdao_app_key_here
+YOUDAO_APP_SECRET=your_youdao_app_secret_here
+PEXELS_API_KEY=your_pexels_api_key_here
+
+# Android SDK路径 (根据你的实际路径配置)
+# sdk.dir=/path/to/Android/Sdk

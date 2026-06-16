@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">LingDict</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">首页</string>
+    <string name="nav_learn">学习</string>
+    <string name="nav_test">测试</string>
+    <string name="nav_statistics">统计</string>
+    <string name="nav_settings">设置</string>
+
+    <!-- Home Screen -->
+    <string name="search_hint">输入单词，如 dictionary…</string>
+    <string name="today_progress">今日进度</string>
+    <string name="study_streak">连续学习</string>
+    <string name="days">天</string>
+    <string name="btn_start_learning">开始学习</string>
+    <string name="btn_quick_review">快速复习</string>
+    <string name="btn_random_test">随机测试</string>
+
+    <!-- Word Card -->
+    <string name="play_pronunciation">播放发音</string>
+    <string name="word_level">难度</string>
+    <string name="definition">释义</string>
+    <string name="examples">例句</string>
+    <string name="swipe_left_unknown">左滑：不认识</string>
+    <string name="swipe_right_known">右滑：认识</string>
+    <string name="swipe_up_favorite">上滑：收藏</string>
+
+    <!-- Test Screen -->
+    <string name="test_type_choice">选择题</string>
+    <string name="test_type_fill">填空题</string>
+    <string name="test_type_listening">听力题</string>
+    <string name="test_type_judge">判断题</string>
+    <string name="submit_answer">提交答案</string>
+    <string name="correct">正确</string>
+    <string name="incorrect">错误</string>
+    <string name="test_result_title">测试结果</string>
+    <string name="accuracy">正确率</string>
+    <string name="time_used">用时</string>
+    <string name="review_mistakes">回顾错题</string>
+
+    <!-- Statistics Screen -->
+    <string name="learning_trend">学习趋势</string>
+    <string name="last_7_days">近7天</string>
+    <string name="last_30_days">近30天</string>
+    <string name="calendar_heatmap">学习日历</string>
+    <string name="mastery_distribution">掌握度分布</string>
+    <string name="new_words">新学</string>
+    <string name="learning_words">学习中</string>
+    <string name="mastered_words">已掌握</string>
+    <string name="export_vocabulary">导出词库</string>
+
+    <!-- Settings Screen -->
+    <string name="daily_goal">每日学习目标</string>
+    <string name="words_per_day">词/天</string>
+    <string name="study_reminder">学习提醒</string>
+    <string name="reminder_time">提醒时间</string>
+    <string name="sound_effects">音效</string>
+    <string name="vibration_feedback">震动反馈</string>
+    <string name="auto_play_pronunciation">自动播放发音</string>
+    <string name="theme">主题</string>
+    <string name="theme_system">跟随系统</string>
+    <string name="theme_light">浅色</string>
+    <string name="theme_dark">深色</string>
+
+    <!-- Common -->
+    <string name="loading">加载中…</string>
+    <string name="error">错误</string>
+    <string name="retry">重试</string>
+    <string name="cancel">取消</string>
+    <string name="confirm">确认</string>
+    <string name="save">保存</string>
+    <string name="delete">删除</string>
+    <string name="share">分享</string>
+
+    <!-- Error Messages -->
+    <string name="error_network">网络连接失败</string>
+    <string name="error_word_not_found">单词未找到</string>
+    <string name="error_database">数据库错误</string>
+
+    <!-- Achievements -->
+    <string name="achievement_first_word">首次学习</string>
+    <string name="achievement_week_streak">连续7天</string>
+    <string name="achievement_100_words">学习100词</string>
+</resources>
