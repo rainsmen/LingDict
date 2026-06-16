@@ -4,26 +4,45 @@ import com.lingdict.app.data.repository.PexelsRepositoryImpl
 import com.lingdict.app.data.repository.StudyRecordRepositoryImpl
 import com.lingdict.app.data.repository.UserWordRepositoryImpl
 import com.lingdict.app.data.repository.WordRepositoryImpl
+import com.lingdict.app.domain.repository.PexelsRepository
+import com.lingdict.app.domain.repository.StudyRecordRepository
+import com.lingdict.app.domain.repository.UserWordRepository
+import com.lingdict.app.domain.repository.WordRepository
+import dagger.Binds
 import dagger.Module
-import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import javax.inject.Singleton
 
 /**
  * 仓库依赖注入模块
- *
- * 注意：Repository已经使用@Singleton注解，这里只需要暴露接口绑定
- * 实际上由于使用了@Inject构造函数，Hilt会自动提供这些实例
- * 这个模块主要用于显式声明依赖关系
+ * 绑定接口到实现类
  */
 @Module
 @InstallIn(SingletonComponent::class)
-object RepositoryModule {
-    // Hilt会通过@Inject构造函数自动提供以下Repository
-    // 这里不需要额外的@Provides方法
+abstract class RepositoryModule {
 
-    // WordRepositoryImpl
-    // UserWordRepositoryImpl
-    // StudyRecordRepositoryImpl
-    // PexelsRepositoryImpl
+    @Binds
+    @Singleton
+    abstract fun bindWordRepository(
+        impl: WordRepositoryImpl
+    ): WordRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindUserWordRepository(
+        impl: UserWordRepositoryImpl
+    ): UserWordRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindStudyRecordRepository(
+        impl: StudyRecordRepositoryImpl
+    ): StudyRecordRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindPexelsRepository(
+        impl: PexelsRepositoryImpl
+    ): PexelsRepository
 }

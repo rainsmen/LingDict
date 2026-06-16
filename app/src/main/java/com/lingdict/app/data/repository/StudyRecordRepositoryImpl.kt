@@ -2,7 +2,12 @@ package com.lingdict.app.data.repository
 
 import com.lingdict.app.data.local.dao.StudyRecordDao
 import com.lingdict.app.data.local.entity.StudyRecordEntity
+import com.lingdict.app.domain.model.StudyStatistics
+import com.lingdict.app.domain.repository.StudyRecordRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -12,7 +17,7 @@ import javax.inject.Singleton
 @Singleton
 class StudyRecordRepositoryImpl @Inject constructor(
     private val studyRecordDao: StudyRecordDao
-) {
+) : StudyRecordRepository {
 
     /**
      * 获取或创建今日学习记录
@@ -117,10 +122,68 @@ class StudyRecordRepositoryImpl @Inject constructor(
     }
 
     /**
+     * 实现接口：获取学习统计数据
+     */
+    override fun getStatistics(): Flow<StudyStatistics> = flow {
+        val totalDays = getTotalStudyDays()
+        val totalLearned = getTotalWordsLearned()
+        val totalReviewed = getTotalWordsReviewed()
+
+        val stats = StudyStatistics(
+            totalStudyDays = totalDays,
+            totalWordsLearned = totalLearned,
+            totalWordsReviewed = totalReviewed,
+            studyStreak = 0 // 需要额外计算
+        )
+        emit(stats)
+    }
+
+    /**
+     * 实现接口：获取指定日期的学习记录
+     */
+    override suspend fun getRecordByDate(date: Long): StudyStatistics? {
+        val record = studyRecordDao.getRecordByDate(date) ?: return null
+        return StudyStatistics(
+            totalStudyDays = 1,
+            totalWordsLearned = record.wordsLearned,
+            totalWordsReviewed = record.wordsReviewed,
+            studyStreak = 0
+        )
+    }
+
+    /**
+     * 实现接口：记录学习数据
+     */
+    override suspend fun recordStudy(wordsLearned: Int, wordsReviewed: Int): Result<Unit> {
+        return try {
+            val today = getStartOfDay()
+            val record = studyRecordDao.getRecordByDate(today)
+            if (record != null) {
+                studyRecordDao.incrementWordsLearned(today, wordsLearned)
+                studyRecordDao.incrementWordsReviewed(today, wordsReviewed)
+            } else {
+                studyRecordDao.insertRecord(
+                    StudyRecordEntity(
+                        date = today,
+                        wordsLearned = wordsLearned,
+                        wordsReviewed = wordsReviewed
+                    )
+                )
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
      * 获取今天开始的时间戳（00:00:00）
+     * 修复：使用LocalDate处理时区问题
      */
     private fun getStartOfDay(): Long {
-        val now = System.currentTimeMillis()
-        return now - (now % (24 * 60 * 60 * 1000))
+        return LocalDate.now()
+            .atStartOfDay(ZoneId.systemDefault())
+            .toInstant()
+            .toEpochMilli()
     }
 }

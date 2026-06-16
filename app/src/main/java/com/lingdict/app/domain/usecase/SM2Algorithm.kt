@@ -1,6 +1,7 @@
 package com.lingdict.app.domain.usecase
 
 import com.lingdict.app.data.local.entity.WordStatus
+import com.lingdict.app.domain.constants.ReviewThresholds
 import com.lingdict.app.domain.model.UserWord
 import kotlin.math.max
 
@@ -50,12 +51,12 @@ object SM2Algorithm {
                 // 第三次及以后，间隔按EF倍增
                 val calculatedInterval = (userWord.interval * newEaseFactor).toInt()
                 // 限制最大间隔为365天，防止溢出
-                minOf(calculatedInterval, 365) to (userWord.repetitions + 1)
+                minOf(calculatedInterval, ReviewThresholds.MAX_INTERVAL_DAYS) to (userWord.repetitions + 1)
             }
         }
 
         // 计算下次复习时间戳，防止溢出
-        val safeInterval = minOf(newInterval, 365)
+        val safeInterval = minOf(newInterval, ReviewThresholds.MAX_INTERVAL_DAYS)
         val nextReviewDate = System.currentTimeMillis() + safeInterval * 24 * 60 * 60 * 1000L
 
         // 确定学习状态
@@ -88,7 +89,10 @@ object SM2Algorithm {
     private fun determineStatus(repetitions: Int, knownCount: Int, testCorrect: Int, testTotal: Int): WordStatus {
         return when {
             // 已掌握：重复次数>=5 且 标记认识>=3次 且 测试正确率>=75%
-            repetitions >= 5 && knownCount >= 3 && testTotal >= 3 && (testCorrect.toFloat() / testTotal) >= 0.75f -> {
+            repetitions >= ReviewThresholds.MASTERED_REPETITIONS
+                && knownCount >= ReviewThresholds.KNOWN_COUNT_THRESHOLD
+                && testTotal >= ReviewThresholds.MIN_TEST_COUNT
+                && (testCorrect.toFloat() / testTotal) >= ReviewThresholds.TEST_ACCURACY_THRESHOLD -> {
                 WordStatus.MASTERED
             }
             // 学习中：至少复习过一次

@@ -24,11 +24,11 @@ class GenerateTestUseCase @Inject constructor(
      * @return 选择题
      */
     suspend fun generateMultipleChoice(userWord: UserWord): Question.MultipleChoice {
-        val correctAnswer = userWord.translation
+        val correctAnswer = userWord.word.translation ?: "Unknown"
 
         // 获取4个随机单词，排除正确答案，取3个作为干扰项
         val distractors = wordRepository.getRandomWords(10)
-            .map { it.translation }
+            .mapNotNull { it.translation }
             .filter { it != correctAnswer }
             .distinct()
             .take(3)
@@ -40,12 +40,12 @@ class GenerateTestUseCase @Inject constructor(
             distractors
         }
 
-        // 组合并打乱选项
-        val options = (listOf(correctAnswer) + finalDistractors).shuffled()
+        // 组合并打乱选项，确保有4个
+        val options = (listOf(correctAnswer) + finalDistractors).take(4).shuffled()
 
         return Question.MultipleChoice(
             id = "mc_${userWord.id}_${System.currentTimeMillis()}",
-            word = userWord.word,
+            word = userWord.word.word,
             options = options,
             correctAnswer = correctAnswer
         )
@@ -57,7 +57,7 @@ class GenerateTestUseCase @Inject constructor(
      * @return 填空题
      */
     fun generateFillInBlank(userWord: UserWord): Question.FillInBlank {
-        val word = userWord.word
+        val word = userWord.word.word
 
         // 计算隐藏长度，至少隐藏1个字母
         val hideLength = maxOf((word.length * 0.4).toInt(), 1)
@@ -74,14 +74,8 @@ class GenerateTestUseCase @Inject constructor(
             id = "fb_${userWord.id}_${System.currentTimeMillis()}",
             word = word,
             hint = displayWord,
-            translation = userWord.translation,
+            translation = userWord.word.translation ?: "",
             correctAnswer = word
-        )
-    }
-            displayWord = displayWord,
-            hiddenPart = hiddenPart,
-            correctAnswer = hiddenPart.lowercase(),
-            hint = userWord.word.translation
         )
     }
 
@@ -94,7 +88,7 @@ class GenerateTestUseCase @Inject constructor(
         val correctAnswer = userWord.word.word
 
         // 获取3个干扰项（发音相似或随机单词）
-        val distractors = wordRepository.getRandomWords(3, excludeWord = correctAnswer)
+        val distractors = wordRepository.getRandomWords(3)
             .map { it.word }
             .take(3)
 

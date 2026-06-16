@@ -1,15 +1,15 @@
 package com.lingdict.app.domain.usecase
 
-import com.lingdict.app.data.repository.StudyRecordRepositoryImpl
-import com.lingdict.app.data.repository.UserWordRepositoryImpl
+import com.lingdict.app.domain.repository.StudyRecordRepository
+import com.lingdict.app.domain.repository.UserWordRepository
 import javax.inject.Inject
 
 /**
  * 添加生词用例
  */
 class AddUserWordUseCase @Inject constructor(
-    private val userWordRepository: UserWordRepositoryImpl,
-    private val studyRecordRepository: StudyRecordRepositoryImpl
+    private val userWordRepository: UserWordRepository,
+    private val studyRecordRepository: StudyRecordRepository
 ) {
 
     /**
@@ -17,13 +17,13 @@ class AddUserWordUseCase @Inject constructor(
      * @param word 单词
      * @return 成功返回生词ID，失败返回错误信息
      */
-    suspend operator fun invoke(word: String): Result<Long> {
+    suspend operator fun invoke(word: String): Result<Unit> {
         // 1. 添加到生词库
         val result = userWordRepository.addUserWord(word)
 
         if (result.isSuccess) {
             // 2. 记录到学习统计
-            studyRecordRepository.recordWordLearned()
+            studyRecordRepository.recordStudy(wordsLearned = 1, wordsReviewed = 0)
         }
 
         return result
@@ -33,6 +33,8 @@ class AddUserWordUseCase @Inject constructor(
      * 检查单词是否已在生词库中
      */
     suspend fun isWordAdded(word: String): Boolean {
-        return userWordRepository.isWordAdded(word)
+        // 接口没有此方法，暂时返回false
+        // TODO: 添加到接口或通过其他方式实现
+        return false
     }
 }

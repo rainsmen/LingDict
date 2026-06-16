@@ -7,6 +7,8 @@ import com.lingdict.app.domain.model.DailyProgress
 import com.lingdict.app.domain.model.DailyRecord
 import com.lingdict.app.domain.model.MasteryDistribution
 import com.lingdict.app.domain.model.StudyStatistics
+import com.lingdict.app.domain.repository.StudyRecordRepository
+import com.lingdict.app.domain.repository.UserWordRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map

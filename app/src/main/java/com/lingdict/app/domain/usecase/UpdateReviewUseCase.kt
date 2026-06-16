@@ -1,15 +1,15 @@
 package com.lingdict.app.domain.usecase
 
 import com.lingdict.app.data.repository.StudyRecordRepositoryImpl
-import com.lingdict.app.data.repository.UserWordRepositoryImpl
 import com.lingdict.app.domain.model.UserWord
+import com.lingdict.app.domain.repository.UserWordRepository
 import javax.inject.Inject
 
 /**
  * 更新复习记录用例（核心：SM-2算法）
  */
 class UpdateReviewUseCase @Inject constructor(
-    private val userWordRepository: UserWordRepositoryImpl,
+    private val userWordRepository: UserWordRepository,
     private val studyRecordRepository: StudyRecordRepositoryImpl
 ) {
 
@@ -28,8 +28,7 @@ class UpdateReviewUseCase @Inject constructor(
         )
 
         // 3. 保存到数据库
-        val entity = wordToSave.toEntity()
-        val result = userWordRepository.updateUserWord(entity)
+        val result = userWordRepository.updateReview(wordToSave)
 
         // 4. 记录复习统计
         if (result.isSuccess) {
@@ -54,8 +53,7 @@ class UpdateReviewUseCase @Inject constructor(
         )
 
         // 3. 保存到数据库
-        val entity = wordToSave.toEntity()
-        val result = userWordRepository.updateUserWord(entity)
+        val result = userWordRepository.updateReview(wordToSave)
 
         // 4. 记录复习统计
         if (result.isSuccess) {
@@ -82,38 +80,16 @@ class UpdateReviewUseCase @Inject constructor(
         )
 
         // 3. 保存到数据库
-        val entity = wordToSave.toEntity()
-        return userWordRepository.updateUserWord(entity)
+        return userWordRepository.updateReview(wordToSave)
     }
 
     /**
      * 切换收藏状态
      */
     suspend fun toggleFavorite(wordId: Long): Result<Unit> {
-        return userWordRepository.toggleFavorite(wordId)
-    }
-
-    /**
-     * 领域模型转Entity
-     */
-    private fun UserWord.toEntity(): com.lingdict.app.data.local.entity.UserWordEntity {
-        return com.lingdict.app.data.local.entity.UserWordEntity(
-            id = id,
-            word = word.word,
-            addedDate = addedDate,
-            lastReviewDate = lastReviewDate,
-            nextReviewDate = nextReviewDate,
-            easeFactor = easeFactor,
-            interval = interval,
-            repetitions = repetitions,
-            status = status,
-            knownCount = knownCount,
-            unknownCount = unknownCount,
-            testCorrectCount = testCorrectCount,
-            testTotalCount = testTotalCount,
-            isFavorite = isFavorite,
-            notes = notes
-        )
+        val userWord = userWordRepository.getUserWord(wordId) ?: return Result.failure(Exception("单词不存在"))
+        val updated = userWord.copy(isFavorite = !userWord.isFavorite)
+        return userWordRepository.updateReview(updated)
     }
 
     /**

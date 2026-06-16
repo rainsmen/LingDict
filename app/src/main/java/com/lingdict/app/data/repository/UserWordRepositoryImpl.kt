@@ -3,7 +3,13 @@ package com.lingdict.app.data.repository
 import com.lingdict.app.data.local.dao.UserWordDao
 import com.lingdict.app.data.local.entity.UserWordEntity
 import com.lingdict.app.data.local.entity.WordStatus
+import com.lingdict.app.domain.model.UserWord
+import com.lingdict.app.domain.model.Word
+import com.lingdict.app.domain.repository.UserWordRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -13,12 +19,52 @@ import javax.inject.Singleton
 @Singleton
 class UserWordRepositoryImpl @Inject constructor(
     private val userWordDao: UserWordDao
-) {
+) : UserWordRepository {
 
     /**
-     * 获取所有生词
+     * 实现接口：获取待复习的单词
      */
-    fun getAllUserWords(): Flow<List<UserWordEntity>> {
+    override fun getDueWords(limit: Int): Flow<List<UserWord>> {
+        val currentTime = System.currentTimeMillis()
+        return userWordDao.getDueWords(currentTime, limit).map { entities ->
+            entities.map { it.toDomainModel() }
+        }
+    }
+
+    /**
+     * 实现接口：添加生词
+     */
+    override suspend fun addUserWord(word: String): Result<Unit> {
+        return addUserWordInternal(word).map { Unit }
+    }
+
+    /**
+     * 实现接口：更新单词复习记录
+     */
+    override suspend fun updateReview(userWord: UserWord): Result<Unit> {
+        return updateUserWord(userWord.toEntity())
+    }
+
+    /**
+     * 实现接口：根据ID获取单词
+     */
+    override suspend fun getUserWord(id: Long): UserWord? {
+        return getUserWordById(id)?.toDomainModel()
+    }
+
+    /**
+     * 实现接口：获取所有生词
+     */
+    override fun getAllUserWords(): Flow<List<UserWord>> {
+        return getAllUserWordsInternal().map { entities ->
+            entities.map { it.toDomainModel() }
+        }
+    }
+
+    /**
+     * 内部方法：获取所有生词
+     */
+    private fun getAllUserWordsInternal(): Flow<List<UserWordEntity>> {
         return userWordDao.getAllUserWords()
     }
 
@@ -37,9 +83,9 @@ class UserWordRepositoryImpl @Inject constructor(
     }
 
     /**
-     * 获取待复习的单词
+     * 内部方法：获取待复习的单词（返回Entity）
      */
-    fun getDueWords(limit: Int = 20): Flow<List<UserWordEntity>> {
+    private fun getDueWordsInternal(limit: Int = 20): Flow<List<UserWordEntity>> {
         val currentTime = System.currentTimeMillis()
         return userWordDao.getDueWords(currentTime, limit)
     }
@@ -83,9 +129,9 @@ class UserWordRepositoryImpl @Inject constructor(
     }
 
     /**
-     * 添加生词
+     * 内部方法：添加生词
      */
-    suspend fun addUserWord(word: String): Result<Long> {
+    private suspend fun addUserWordInternal(word: String): Result<Long> {
         return try {
             // 检查是否已添加
             if (userWordDao.isWordAdded(word)) {
@@ -203,9 +249,49 @@ class UserWordRepositoryImpl @Inject constructor(
 
     /**
      * 获取今天开始的时间戳（00:00:00）
+     * 修复：使用LocalDate处理时区问题
      */
     private fun getStartOfDay(): Long {
-        val now = System.currentTimeMillis()
-        return now - (now % (24 * 60 * 60 * 1000))
+        return LocalDate.now()
+            .atStartOfDay(ZoneId.systemDefault())
+            .toInstant()
+            .toEpochMilli()
+    }
+
+    /**
+     * Entity转Domain模型
+     */
+    private fun UserWordEntity.toDomainModel(): UserWord {
+        return UserWord(
+            id = id,
+            word = Word(
+                word = word,
+                phonetic = null,
+                definition = null,
+                translation = null,
+                pos = null,
+                collins = null,
+                oxford = null,
+                tag = null,
+                bnc = null,
+                frq = null,
+                exchange = null,
+                detail = null,
+                audio = null
+            ),
+            addedDate = addedDate,
+            lastReviewDate = lastReviewDate,
+            nextReviewDate = nextReviewDate,
+            easeFactor = easeFactor,
+            interval = interval,
+            repetitions = repetitions,
+            status = status,
+            knownCount = knownCount,
+            unknownCount = unknownCount,
+            testCorrectCount = testCorrectCount,
+            testTotalCount = testTotalCount,
+            isFavorite = isFavorite,
+            notes = notes
+        )
     }
 }

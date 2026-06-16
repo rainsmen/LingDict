@@ -5,9 +5,11 @@ import com.lingdict.app.data.local.dao.WordDao
 import com.lingdict.app.data.local.entity.WordEntity
 import com.lingdict.app.data.mapper.toWordEntity
 import com.lingdict.app.data.remote.YoudaoApiService
+import com.lingdict.app.domain.model.Word
+import com.lingdict.app.domain.repository.WordRepository
 import com.lingdict.app.util.YoudaoSignUtil
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -19,22 +21,38 @@ import javax.inject.Singleton
 class WordRepositoryImpl @Inject constructor(
     private val wordDao: WordDao,
     private val youdaoApi: YoudaoApiService
-) {
+) : WordRepository {
 
     /**
-     * 搜索单词（用于自动补全）
+     * 实现接口：搜索单词（用于自动补全）
      */
-    fun searchWords(query: String, limit: Int = 10): Flow<List<WordEntity>> {
-        return wordDao.searchWords(query, limit)
+    override fun searchWords(query: String): Flow<List<String>> {
+        return wordDao.searchWords(query, 10).map { entities ->
+            entities.map { it.word }
+        }
     }
 
     /**
-     * 获取单词详情（混合数据源）
+     * 实现接口：获取单词详情
+     */
+    override suspend fun getWord(word: String): Word? {
+        return getWordInternal(word).getOrNull()?.toDomainModel()
+    }
+
+    /**
+     * 实现接口：获取随机单词
+     */
+    override suspend fun getRandomWords(count: Int): List<Word> {
+        return getRandomWordsInternal(count).map { it.toDomainModel() }
+    }
+
+    /**
+     * 内部方法：获取单词详情（混合数据源）
      * 1. 先查本地数据库
      * 2. 未找到则调用有道API
      * 3. 将API结果缓存到本地
      */
-    suspend fun getWord(word: String): Result<WordEntity> {
+    private suspend fun getWordInternal(word: String): Result<WordEntity> {
         return try {
             // 1. 查询本地数据库
             val localWord = wordDao.getWord(word)
@@ -90,9 +108,9 @@ class WordRepositoryImpl @Inject constructor(
     }
 
     /**
-     * 获取随机单词（用于生成测试题干扰项）
+     * 内部方法：获取随机单词（用于生成测试题干扰项）
      */
-    suspend fun getRandomWords(count: Int, excludeWord: String? = null): List<WordEntity> {
+    private suspend fun getRandomWordsInternal(count: Int, excludeWord: String? = null): List<WordEntity> {
         val words = wordDao.getRandomWords(count + 1) // 多获取一个以防排除
         return if (excludeWord != null) {
             words.filter { it.word != excludeWord }.take(count)
@@ -120,5 +138,26 @@ class WordRepositoryImpl @Inject constructor(
      */
     suspend fun wordExists(word: String): Boolean {
         return wordDao.wordExists(word)
+    }
+
+    /**
+     * Entity转Domain模型
+     */
+    private fun WordEntity.toDomainModel(): Word {
+        return Word(
+            word = word,
+            phonetic = phonetic,
+            definition = definition,
+            translation = translation,
+            pos = pos,
+            collins = collins,
+            oxford = oxford,
+            tag = tag,
+            bnc = bnc,
+            frq = frq,
+            exchange = exchange,
+            detail = detail,
+            audio = audio
+        )
     }
 }
