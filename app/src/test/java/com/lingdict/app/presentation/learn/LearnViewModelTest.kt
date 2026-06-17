@@ -115,6 +115,7 @@ class LearnViewModelTest {
             viewModel.onEvent(LearnEvent.PlayAudio)
 
             verify { ttsManager.speak("test") }
+            cancelAndIgnoreRemainingEvents()
         }
     }
 }
