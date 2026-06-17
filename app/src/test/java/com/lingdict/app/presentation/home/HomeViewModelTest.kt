@@ -96,11 +96,17 @@ class HomeViewModelTest {
             listOf(Word(word = "dictionary", translation = "字典", level = "CET4"))
         )
 
-        viewModel.onEvent(HomeEvent.SearchQueryChanged("dict"))
-        advanceTimeBy(400)
-
         viewModel.uiState.test {
-            val state = awaitItem()
+            awaitItem()
+
+            viewModel.onEvent(HomeEvent.SearchQueryChanged("dict"))
+            advanceTimeBy(400)
+            advanceUntilIdle()
+
+            var state = awaitItem()
+            while (state.searchResults.isEmpty()) {
+                state = awaitItem()
+            }
             assertEquals("dict", state.searchQuery)
             assertEquals("dictionary", state.searchResults.first().word)
         }

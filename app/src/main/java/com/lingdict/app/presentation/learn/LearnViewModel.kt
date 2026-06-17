@@ -104,7 +104,7 @@ class LearnViewModel @Inject constructor(
             }
 
             is LearnEvent.PlayAudio -> {
-                val currentWord = uiState.value.currentWord
+                val currentWord = currentWord()
                 if (currentWord != null && ttsManager.isAvailable()) {
                     ttsManager.speak(currentWord.word.word)
                 } else if (!ttsManager.isAvailable()) {
@@ -119,7 +119,7 @@ class LearnViewModel @Inject constructor(
     }
 
     private fun handleSwipe(quality: Int) {
-        val currentWord = uiState.value.currentWord ?: return
+        val currentWord = currentWord() ?: return
 
         viewModelScope.launch {
             _isLoading.value = true
@@ -141,6 +141,10 @@ class LearnViewModel @Inject constructor(
 
             _isLoading.value = false
         }
+    }
+
+    private fun currentWord(): UserWord? {
+        return _words.value.getOrNull(_currentIndex.value)
     }
 
     fun resetProgress() {
