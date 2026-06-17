@@ -1,14 +1,17 @@
 package com.lingdict.app.data.repository
 
 import com.lingdict.app.BuildConfig
+import com.lingdict.app.data.local.dao.ExampleDao
 import com.lingdict.app.data.local.dao.WordDao
 import com.lingdict.app.data.local.entity.WordEntity
 import com.lingdict.app.data.mapper.toWordEntity
 import com.lingdict.app.data.remote.YoudaoApiService
+import com.lingdict.app.domain.model.Example
 import com.lingdict.app.domain.model.Word
 import com.lingdict.app.domain.repository.WordRepository
 import com.lingdict.app.util.YoudaoSignUtil
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -20,6 +23,7 @@ import javax.inject.Singleton
 @Singleton
 class WordRepositoryImpl @Inject constructor(
     private val wordDao: WordDao,
+    private val exampleDao: ExampleDao,
     private val youdaoApi: YoudaoApiService
 ) : WordRepository {
 
@@ -36,7 +40,16 @@ class WordRepositoryImpl @Inject constructor(
      * 实现接口：获取单词详情
      */
     override suspend fun getWord(word: String): Word? {
-        return getWordInternal(word).getOrNull()?.toDomainModel()
+        return getWordInternal(word).getOrNull()?.let { wordEntity ->
+            val examples = exampleDao.getExamples(word).first().map { exampleEntity ->
+                Example(
+                    sentenceEn = exampleEntity.sentenceEn,
+                    sentenceZh = exampleEntity.sentenceZh,
+                    source = exampleEntity.source
+                )
+            }
+            wordEntity.toDomainModel().copy(examples = examples)
+        }
     }
 
     /**

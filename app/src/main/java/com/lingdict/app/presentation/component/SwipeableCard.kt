@@ -35,7 +35,8 @@ fun SwipeableCard(
     onSwipeUp: () -> Unit,     // 收藏/标记
     modifier: Modifier = Modifier,
     isFlipped: Boolean = false,
-    onFlip: () -> Unit = {}
+    onFlip: () -> Unit = {},
+    onPlayAudio: () -> Unit = {}
 ) {
     val offsetX = remember { Animatable(0f) }
     val offsetY = remember { Animatable(0f) }
@@ -117,7 +118,8 @@ fun SwipeableCard(
         FlipCard(
             word = word,
             isFlipped = isFlipped,
-            onFlip = onFlip
+            onFlip = onFlip,
+            onPlayAudio = onPlayAudio
         )
 
         // Swipe indicators

@@ -167,7 +167,8 @@ fun LearnCardSection(
                 onFlip = { onEvent(LearnEvent.FlipCard) },
                 onSwipeLeft = { onEvent(LearnEvent.SwipeLeft()) },
                 onSwipeRight = { onEvent(LearnEvent.SwipeRight()) },
-                onSwipeUp = { onEvent(LearnEvent.SwipeUp()) }
+                onSwipeUp = { onEvent(LearnEvent.SwipeUp()) },
+                onPlayAudio = { onEvent(LearnEvent.PlayAudio) }
             )
         }
 

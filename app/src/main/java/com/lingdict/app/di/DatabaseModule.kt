@@ -3,6 +3,7 @@ package com.lingdict.app.di
 import android.content.Context
 import androidx.room.Room
 import com.lingdict.app.data.local.LingDictDatabase
+import com.lingdict.app.data.local.dao.ExampleDao
 import com.lingdict.app.data.local.dao.StudyRecordDao
 import com.lingdict.app.data.local.dao.UserWordDao
 import com.lingdict.app.data.local.dao.WordDao
@@ -51,5 +52,11 @@ object DatabaseModule {
     @Singleton
     fun provideStudyRecordDao(database: LingDictDatabase): StudyRecordDao {
         return database.studyRecordDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideExampleDao(database: LingDictDatabase): ExampleDao {
+        return database.exampleDao()
     }
 }

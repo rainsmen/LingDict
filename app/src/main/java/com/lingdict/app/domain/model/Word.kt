@@ -49,5 +49,17 @@ data class Word(
     val audio: String? = null,
 
     /** 助记图片URL */
-    val imageUrl: String? = null
+    val imageUrl: String? = null,
+
+    /** 例句列表 */
+    val examples: List<Example> = emptyList()
+)
+
+/**
+ * 例句模型
+ */
+data class Example(
+    val sentenceEn: String,
+    val sentenceZh: String,
+    val source: String? = null
 )

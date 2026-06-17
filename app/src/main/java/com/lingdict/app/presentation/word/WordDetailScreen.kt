@@ -21,6 +21,7 @@ import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.lingdict.app.domain.model.Word
+import com.lingdict.app.presentation.component.FlipCard
 import com.lingdict.app.presentation.theme.LingDictTheme
 
 @Composable
@@ -138,14 +139,26 @@ fun WordDetailView(
     imageUrl: String?,
     onPlayAudio: () -> Unit
 ) {
-    val definition = word.definition.orEmpty()
+    var isFlipped by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
+            .padding(16.dp)
     ) {
-        // Image card
+        // Flip card for main content
+        FlipCard(
+            word = word,
+            isFlipped = isFlipped,
+            onFlip = { isFlipped = !isFlipped },
+            onPlayAudio = onPlayAudio,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Image card (if available)
         if (imageUrl != null) {
             Card(
                 modifier = Modifier
@@ -162,67 +175,14 @@ fun WordDetailView(
                     contentScale = ContentScale.Crop
                 )
             }
+            Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // Word header card
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
-            )
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = word.word,
-                    style = MaterialTheme.typography.displayMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-
-                if (!word.phonetic.isNullOrEmpty()) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = word.phonetic,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        IconButton(onClick = onPlayAudio) {
-                            Icon(
-                                imageVector = Icons.Default.VolumeUp,
-                                contentDescription = "播放发音",
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                    }
-                }
-
-                if (word.level != null) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    AssistChip(
-                        onClick = { },
-                        label = { Text(word.level) }
-                    )
-                }
-            }
-        }
-
-        // Definition section
-        if (definition.isNotEmpty()) {
+        // Examples section
+        if (word.examples.isNotEmpty()) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 Column(
                     modifier = Modifier
@@ -233,92 +193,80 @@ fun WordDetailView(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Book,
+                            imageVector = Icons.Default.FormatQuote,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "英文释义",
+                            text = "例句",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    word.examples.forEachIndexed { index, example ->
+                        if (index > 0) {
+                            Divider(modifier = Modifier.padding(vertical = 12.dp))
+                        }
+
+                        Column {
+                            Text(
+                                text = example.sentenceEn,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = example.sentenceZh,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            if (example.source != null) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "— ${example.source}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.outline
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FormatQuote,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "例句",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = definition,
-                        style = MaterialTheme.typography.bodyLarge
+                        text = "暂无例句",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-            }
-        }
-
-        // Translation section
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Translate,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "中文释义",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = word.translation.orEmpty(),
-                    style = MaterialTheme.typography.bodyLarge
-                )
-            }
-        }
-
-        // Examples section placeholder
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.FormatQuote,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "例句",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "暂无例句",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
         }
 
@@ -337,7 +285,18 @@ fun WordDetailScreenPreview() {
                     phonetic = "/ˈdɪkʃəneri/",
                     definition = "A book or electronic resource that lists the words of a language (typically in alphabetical order) and gives their meaning",
                     translation = "n. 字典；词典",
-                    level = "CET4"
+                    level = "CET4",
+                    examples = listOf(
+                        com.lingdict.app.domain.model.Example(
+                            sentenceEn = "I always keep a dictionary on my desk.",
+                            sentenceZh = "我总是在桌上放一本字典。",
+                            source = "Oxford"
+                        ),
+                        com.lingdict.app.domain.model.Example(
+                            sentenceEn = "You can look up the word in the dictionary.",
+                            sentenceZh = "你可以在字典里查这个单词。"
+                        )
+                    )
                 ),
                 imageUrl = null,
                 isLoading = false
