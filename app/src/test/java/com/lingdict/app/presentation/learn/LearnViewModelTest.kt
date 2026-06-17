@@ -105,10 +105,16 @@ class LearnViewModelTest {
     @Test
     fun `play audio speaks current word when available`() = runTest {
         every { ttsManager.isAvailable() } returns true
-        advanceUntilIdle()
 
-        viewModel.onEvent(LearnEvent.PlayAudio)
+        viewModel.uiState.test {
+            var state = awaitItem()
+            while (state.currentWord == null) {
+                state = awaitItem()
+            }
 
-        verify { ttsManager.speak("test") }
+            viewModel.onEvent(LearnEvent.PlayAudio)
+
+            verify { ttsManager.speak("test") }
+        }
     }
 }
