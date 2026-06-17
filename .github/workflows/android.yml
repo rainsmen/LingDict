@@ -79,9 +79,21 @@ jobs:
     - name: Build Release APK
       run: ./gradlew assembleRelease --stacktrace
 
-    - name: Upload Release APK
+    - name: Sign Release APK
+      run: |
+        echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > release-keystore.jks
+        BUILD_TOOLS_VERSION=$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -n 1)
+        "$ANDROID_HOME/build-tools/$BUILD_TOOLS_VERSION/apksigner" sign \
+          --ks release-keystore.jks \
+          --ks-key-alias "${{ secrets.ANDROID_KEY_ALIAS }}" \
+          --ks-pass "pass:${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
+          --key-pass "pass:${{ secrets.ANDROID_KEY_PASSWORD }}" \
+          --out app/build/outputs/apk/release/app-release-signed.apk \
+          app/build/outputs/apk/release/app-release-unsigned.apk
+
+    - name: Upload Signed Release APK
       uses: actions/upload-artifact@v4
       with:
-        name: app-release
-        path: app/build/outputs/apk/release/app-release-unsigned.apk
+        name: app-release-signed
+        path: app/build/outputs/apk/release/app-release-signed.apk
         retention-days: 30

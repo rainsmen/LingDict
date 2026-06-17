@@ -42,17 +42,29 @@ jobs:
     - name: Build Release APK
       run: ./gradlew assembleRelease --stacktrace
 
+    - name: Sign Release APK
+      run: |
+        echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > release-keystore.jks
+        BUILD_TOOLS_VERSION=$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -n 1)
+        "$ANDROID_HOME/build-tools/$BUILD_TOOLS_VERSION/apksigner" sign \
+          --ks release-keystore.jks \
+          --ks-key-alias "${{ secrets.ANDROID_KEY_ALIAS }}" \
+          --ks-pass "pass:${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
+          --key-pass "pass:${{ secrets.ANDROID_KEY_PASSWORD }}" \
+          --out app/build/outputs/apk/release/app-release-signed.apk \
+          app/build/outputs/apk/release/app-release-unsigned.apk
+
     - name: Upload Debug APK
       uses: actions/upload-artifact@v4
       with:
-        name: app-debug
+        name: app-debug-installable
         path: app/build/outputs/apk/debug/app-debug.apk
 
-    - name: Upload Release APK
+    - name: Upload Signed Release APK
       uses: actions/upload-artifact@v4
       with:
-        name: app-release
-        path: app/build/outputs/apk/release/app-release-unsigned.apk
+        name: app-release-signed
+        path: app/build/outputs/apk/release/app-release-signed.apk
 
     - name: Create Release
       if: startsWith(github.ref, 'refs/tags/')
@@ -60,13 +72,13 @@ jobs:
       with:
         files: |
           app/build/outputs/apk/debug/app-debug.apk
-          app/build/outputs/apk/release/app-release-unsigned.apk
+          app/build/outputs/apk/release/app-release-signed.apk
         body: |
           ## LingDict APK Release
 
           ### 下载说明
-          - `app-debug.apk`: 调试版本（包含调试信息）
-          - `app-release-unsigned.apk`: 发布版本（未签名）
+          - `app-debug.apk`: 调试版本（已签名，可安装）
+          - `app-release-signed.apk`: 发布版本（已签名，可安装）
 
           ### 功能特性
           - 50,000词ECDICT词库
