@@ -36,6 +36,8 @@ class PexelsRepositoryImpl @Inject constructor(
      * @return 图片URL，失败返回null
      */
     private suspend fun searchWordImage(word: String): String? {
+        if (BuildConfig.PEXELS_API_KEY.isBlank()) return null
+
         return try {
             val response = pexelsApi.searchPhotos(
                 query = word,
@@ -50,7 +52,6 @@ class PexelsRepositoryImpl @Inject constructor(
                 null
             }
         } catch (e: Exception) {
-            e.printStackTrace()
             null
         }
     }

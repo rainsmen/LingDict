@@ -48,7 +48,9 @@ class WordRepositoryImpl @Inject constructor(
                     source = exampleEntity.source
                 )
             }
-            wordEntity.toDomainModel().copy(examples = examples)
+            wordEntity.toDomainModel().copy(
+                examples = examples.ifEmpty { fallbackExamples(wordEntity) }
+            )
         }
     }
 
@@ -151,6 +153,22 @@ class WordRepositoryImpl @Inject constructor(
      */
     suspend fun wordExists(word: String): Boolean {
         return wordDao.wordExists(word)
+    }
+
+    private fun fallbackExamples(word: WordEntity): List<Example> {
+        val translation = word.translation.ifBlank { "这个词" }
+        return listOf(
+            Example(
+                sentenceEn = "I want to understand the word ${word.word} clearly.",
+                sentenceZh = "我想清楚理解 ${word.word} 这个词。",
+                source = "LingDict"
+            ),
+            Example(
+                sentenceEn = "This example helps me remember ${word.word} in context.",
+                sentenceZh = "这个例句帮助我在语境中记住：$translation。",
+                source = "LingDict"
+            )
+        )
     }
 
     /**

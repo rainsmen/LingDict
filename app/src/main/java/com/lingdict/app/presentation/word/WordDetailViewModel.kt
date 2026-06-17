@@ -1,10 +1,10 @@
 package com.lingdict.app.presentation.word
 
+import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lingdict.app.domain.model.Word
-import com.lingdict.app.domain.repository.PexelsRepository
 import com.lingdict.app.domain.usecase.AddUserWordUseCase
 import com.lingdict.app.domain.usecase.SearchWordUseCase
 import com.lingdict.app.util.TTSManager
@@ -32,11 +32,10 @@ class WordDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val searchWordUseCase: SearchWordUseCase,
     private val addUserWordUseCase: AddUserWordUseCase,
-    private val pexelsRepository: PexelsRepository,
     private val ttsManager: TTSManager
 ) : ViewModel() {
 
-    private val wordParam: String = savedStateHandle.get<String>("word") ?: ""
+    private val wordParam: String = Uri.decode(savedStateHandle.get<String>("word").orEmpty()).trim()
 
     private val _uiState = MutableStateFlow(WordDetailUiState(isLoading = true))
     val uiState: StateFlow<WordDetailUiState> = _uiState.asStateFlow()
@@ -78,10 +77,6 @@ class WordDetailViewModel @Inject constructor(
                 }
             }
         }
-    }
-
-    private fun loadImage(word: String) {
-        // 已通过getWordDetail获取图片，此方法已不需要
     }
 
     fun onEvent(event: WordDetailEvent) {

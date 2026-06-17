@@ -5,6 +5,8 @@ import com.lingdict.app.domain.repository.PexelsRepository
 import com.lingdict.app.domain.repository.WordRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import javax.inject.Inject
 
 /**
@@ -37,9 +39,14 @@ class SearchWordUseCase @Inject constructor(
         val imageUrl = pexelsRepository.searchWordImageWithFallback(
             word = wordDetails.word,
             translation = wordDetails.translation
-        )
+        ) ?: fallbackImageUrl(wordDetails.word)
 
         // 3. 返回带图片的单词
         return Result.success(wordDetails.copy(imageUrl = imageUrl))
+    }
+
+    private fun fallbackImageUrl(word: String): String {
+        val query = URLEncoder.encode(word, StandardCharsets.UTF_8.name())
+        return "https://source.unsplash.com/800x600/?$query"
     }
 }

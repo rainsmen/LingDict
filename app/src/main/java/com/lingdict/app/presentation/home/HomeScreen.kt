@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -94,9 +95,16 @@ fun HomeContent(
                     query = uiState.searchQuery,
                     onQueryChange = { onEvent(HomeEvent.SearchQueryChanged(it)) },
                     suggestions = uiState.searchResults.map { it.word },
-                    onSuggestionClick = { onEvent(HomeEvent.WordSelected(it)) }
+                    onSuggestionClick = { onEvent(HomeEvent.WordSelected(it)) },
+                    onSearch = { query ->
+                        query.trim().takeIf { it.isNotEmpty() }?.let {
+                            onEvent(HomeEvent.WordSelected(it))
+                        }
+                    }
                 )
             }
+
+            val normalizedQuery = uiState.searchQuery.trim()
 
             // Search results
             if (uiState.searchResults.isNotEmpty() && uiState.searchQuery.isNotEmpty()) {
@@ -115,6 +123,20 @@ fun HomeContent(
                         level = word.level,
                         onClick = { onEvent(HomeEvent.WordSelected(word.word)) }
                     )
+                }
+            } else if (normalizedQuery.length >= 2) {
+                item {
+                    OutlinedButton(
+                        onClick = { onEvent(HomeEvent.WordSelected(normalizedQuery)) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = null
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("查询 $normalizedQuery")
+                    }
                 }
             }
 
