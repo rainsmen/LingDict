@@ -5,6 +5,7 @@ import com.lingdict.app.data.local.dao.ExampleDao
 import com.lingdict.app.data.local.dao.WordDao
 import com.lingdict.app.data.local.entity.WordEntity
 import com.lingdict.app.data.mapper.toWordEntity
+import com.lingdict.app.data.remote.FreeDictionaryApiService
 import com.lingdict.app.data.remote.YoudaoApiService
 import com.lingdict.app.domain.model.Example
 import com.lingdict.app.domain.model.Word
@@ -24,7 +25,8 @@ import javax.inject.Singleton
 class WordRepositoryImpl @Inject constructor(
     private val wordDao: WordDao,
     private val exampleDao: ExampleDao,
-    private val youdaoApi: YoudaoApiService
+    private val youdaoApi: YoudaoApiService,
+    private val freeDictionaryApi: FreeDictionaryApiService
 ) : WordRepository {
 
     /**
@@ -100,11 +102,17 @@ class WordRepositoryImpl @Inject constructor(
                 wordDao.insertWord(wordEntity)
                 Result.success(wordEntity)
             } else {
-                Result.failure(Exception("单词未找到或API返回错误"))
+                getWordFromFreeDictionary(word)?.let { fallbackWord ->
+                    wordDao.insertWord(fallbackWord)
+                    Result.success(fallbackWord)
+                } ?: Result.success(createMinimalWord(word))
             }
 
         } catch (e: Exception) {
-            Result.failure(e)
+            getWordFromFreeDictionary(word)?.let { fallbackWord ->
+                wordDao.insertWord(fallbackWord)
+                Result.success(fallbackWord)
+            } ?: Result.success(createMinimalWord(word))
         }
     }
 
@@ -155,20 +163,70 @@ class WordRepositoryImpl @Inject constructor(
         return wordDao.wordExists(word)
     }
 
+    private suspend fun getWordFromFreeDictionary(word: String): WordEntity? {
+        return try {
+            val entry = freeDictionaryApi.lookup(word.trim().lowercase()).firstOrNull() ?: return null
+            val firstMeaning = entry.meanings.orEmpty().firstOrNull()
+            val firstDefinition = firstMeaning?.definitions.orEmpty()
+                .firstOrNull { !it.definition.isNullOrBlank() }
+                ?.definition
+                .orEmpty()
+            if (firstDefinition.isBlank()) return null
+
+            val phonetic = entry.phonetic
+                ?: entry.phonetics.orEmpty().firstOrNull { !it.text.isNullOrBlank() }?.text
+            val audio = entry.phonetics.orEmpty().firstOrNull { !it.audio.isNullOrBlank() }?.audio
+
+            WordEntity(
+                word = entry.word?.ifBlank { word } ?: word,
+                phonetic = phonetic?.takeIf { it.isNotBlank() },
+                definition = firstDefinition,
+                translation = firstDefinition,
+                pos = firstMeaning?.partOfSpeech,
+                audio = audio,
+                addedTime = System.currentTimeMillis()
+            )
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun createMinimalWord(word: String): WordEntity {
+        val normalized = word.trim()
+        return WordEntity(
+            word = normalized,
+            definition = "No local or online definition was returned for this word.",
+            translation = "暂无释义，可稍后重试在线查询。",
+            addedTime = System.currentTimeMillis()
+        )
+    }
+
     private fun fallbackExamples(word: WordEntity): List<Example> {
-        val translation = word.translation.ifBlank { "这个词" }
-        return listOf(
+        val meaning = word.translation.ifBlank { word.definition }.ifBlank { "这个词" }
+        val templates = listOf(
             Example(
-                sentenceEn = "I want to understand the word ${word.word} clearly.",
-                sentenceZh = "我想清楚理解 ${word.word} 这个词。",
+                sentenceEn = "The article uses ${word.word} to express an important idea.",
+                sentenceZh = "这篇文章用 ${word.word} 表达一个重要意思：$meaning。",
                 source = "LingDict"
             ),
             Example(
-                sentenceEn = "This example helps me remember ${word.word} in context.",
-                sentenceZh = "这个例句帮助我在语境中记住：$translation。",
+                sentenceEn = "You may see ${word.word} in reading, writing, or daily conversation.",
+                sentenceZh = "你可能会在阅读、写作或日常对话中见到 ${word.word}。",
+                source = "LingDict"
+            ),
+            Example(
+                sentenceEn = "Try to connect ${word.word} with a real situation you know.",
+                sentenceZh = "试着把 ${word.word} 和你熟悉的真实场景联系起来。",
+                source = "LingDict"
+            ),
+            Example(
+                sentenceEn = "A short sentence can make ${word.word} easier to remember.",
+                sentenceZh = "一个短句可以让 ${word.word} 更容易被记住。",
                 source = "LingDict"
             )
         )
+        val start = word.word.lowercase().fold(0) { acc, char -> acc + char.code } % templates.size
+        return listOf(templates[start], templates[(start + 1) % templates.size])
     }
 
     /**
@@ -177,7 +235,9 @@ class WordRepositoryImpl @Inject constructor(
     private fun WordEntity.toDomainModel(): Word {
         return Word(
             word = word,
-            phonetic = phonetic,
+            phonetic = phonetic?.takeIf { it.isNotBlank() }
+                ?: phoneticUs?.takeIf { it.isNotBlank() }
+                ?: phoneticUk?.takeIf { it.isNotBlank() },
             definition = definition,
             translation = translation,
             level = level,

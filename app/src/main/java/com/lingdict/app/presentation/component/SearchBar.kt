@@ -10,9 +10,13 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.lingdict.app.presentation.theme.LingDictTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -27,25 +31,42 @@ fun SearchBar(
     onSearch: (String) -> Unit = {}
 ) {
     var expanded by remember { mutableStateOf(false) }
+    var hasFocus by remember { mutableStateOf(false) }
+    val lifecycleOwner = LocalLifecycleOwner.current
 
-    // Update expanded state based on query and suggestions
-    LaunchedEffect(query, suggestions) {
-        expanded = query.isNotEmpty() && suggestions.isNotEmpty()
+    // Update expanded state based on focus, query, and suggestions.
+    LaunchedEffect(query, suggestions, hasFocus) {
+        expanded = hasFocus && query.isNotEmpty() && suggestions.isNotEmpty()
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
+                expanded = false
+                hasFocus = false
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     ExposedDropdownMenuBox(
         expanded = expanded,
-        onExpandedChange = { expanded = it && query.isNotEmpty() && suggestions.isNotEmpty() },
+        onExpandedChange = { expanded = it && hasFocus && query.isNotEmpty() && suggestions.isNotEmpty() },
         modifier = modifier
     ) {
         OutlinedTextField(
             value = query,
             onValueChange = {
                 onQueryChange(it)
-                expanded = it.isNotEmpty() && suggestions.isNotEmpty()
+                expanded = hasFocus && it.isNotEmpty() && suggestions.isNotEmpty()
             },
             modifier = Modifier
                 .fillMaxWidth()
+                .onFocusChanged { focusState ->
+                    hasFocus = focusState.isFocused
+                    if (!focusState.isFocused) expanded = false
+                }
                 .menuAnchor(),
             placeholder = { Text(placeholder) },
             leadingIcon = {

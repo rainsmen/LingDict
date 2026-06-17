@@ -48,7 +48,7 @@ fun WordCard(
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    if (phonetic != null) {
+                    if (!phonetic.isNullOrBlank()) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = phonetic,

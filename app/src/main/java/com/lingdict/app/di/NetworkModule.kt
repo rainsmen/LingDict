@@ -1,6 +1,7 @@
 package com.lingdict.app.di
 
 import com.lingdict.app.BuildConfig
+import com.lingdict.app.data.remote.FreeDictionaryApiService
 import com.lingdict.app.data.remote.PexelsApiService
 import com.lingdict.app.data.remote.YoudaoApiService
 import dagger.Module
@@ -29,6 +30,10 @@ object NetworkModule {
     @Qualifier
     @Retention(AnnotationRetention.BINARY)
     annotation class PexelsRetrofit
+
+    @Qualifier
+    @Retention(AnnotationRetention.BINARY)
+    annotation class FreeDictionaryRetrofit
 
     @Provides
     @Singleton
@@ -73,6 +78,17 @@ object NetworkModule {
 
     @Provides
     @Singleton
+    @FreeDictionaryRetrofit
+    fun provideFreeDictionaryRetrofit(okHttpClient: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(FreeDictionaryApiService.BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
+    @Provides
+    @Singleton
     fun provideYoudaoApiService(@YoudaoRetrofit retrofit: Retrofit): YoudaoApiService {
         return retrofit.create(YoudaoApiService::class.java)
     }
@@ -81,5 +97,11 @@ object NetworkModule {
     @Singleton
     fun providePexelsApiService(@PexelsRetrofit retrofit: Retrofit): PexelsApiService {
         return retrofit.create(PexelsApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideFreeDictionaryApiService(@FreeDictionaryRetrofit retrofit: Retrofit): FreeDictionaryApiService {
+        return retrofit.create(FreeDictionaryApiService::class.java)
     }
 }
