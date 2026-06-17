@@ -18,16 +18,12 @@ class UpdateReviewUseCase @Inject constructor(
      * @param userWord 用户单词
      */
     suspend fun markAsKnown(userWord: UserWord): Result<Unit> {
-        // 1. 使用SM-2算法计算下次复习时间
+        // 1. 先更新计数，再用SM-2算法计算下次复习时间和状态
         val quality = SM2Algorithm.qualityFromUserMark(isKnown = true)
-        val updatedWord = SM2Algorithm.calculateNextReview(userWord, quality)
+        val countedWord = userWord.copy(knownCount = userWord.knownCount + 1)
+        val wordToSave = SM2Algorithm.calculateNextReview(countedWord, quality)
 
-        // 2. 更新knownCount
-        val wordToSave = updatedWord.copy(
-            knownCount = updatedWord.knownCount + 1
-        )
-
-        // 3. 保存到数据库
+        // 2. 保存到数据库
         val result = userWordRepository.updateReview(wordToSave)
 
         // 4. 记录复习统计
@@ -43,16 +39,12 @@ class UpdateReviewUseCase @Inject constructor(
      * @param userWord 用户单词
      */
     suspend fun markAsUnknown(userWord: UserWord): Result<Unit> {
-        // 1. 使用SM-2算法计算下次复习时间（质量较低，会重置进度）
+        // 1. 先更新计数，再用SM-2算法计算下次复习时间
         val quality = SM2Algorithm.qualityFromUserMark(isKnown = false)
-        val updatedWord = SM2Algorithm.calculateNextReview(userWord, quality)
+        val countedWord = userWord.copy(unknownCount = userWord.unknownCount + 1)
+        val wordToSave = SM2Algorithm.calculateNextReview(countedWord, quality)
 
-        // 2. 更新unknownCount
-        val wordToSave = updatedWord.copy(
-            unknownCount = updatedWord.unknownCount + 1
-        )
-
-        // 3. 保存到数据库
+        // 2. 保存到数据库
         val result = userWordRepository.updateReview(wordToSave)
 
         // 4. 记录复习统计
@@ -70,12 +62,11 @@ class UpdateReviewUseCase @Inject constructor(
      */
     suspend fun recordTestResult(userWord: UserWord, isCorrect: Boolean): Result<Unit> {
         val quality = SM2Algorithm.qualityFromTestResult(isCorrect)
-        val updatedWord = SM2Algorithm.calculateNextReview(userWord, quality)
-
-        val wordToSave = updatedWord.copy(
-            testTotalCount = updatedWord.testTotalCount + 1,
-            testCorrectCount = if (isCorrect) updatedWord.testCorrectCount + 1 else updatedWord.testCorrectCount
+        val countedWord = userWord.copy(
+            testTotalCount = userWord.testTotalCount + 1,
+            testCorrectCount = if (isCorrect) userWord.testCorrectCount + 1 else userWord.testCorrectCount
         )
+        val wordToSave = SM2Algorithm.calculateNextReview(countedWord, quality)
 
         val result = userWordRepository.updateReview(wordToSave)
         if (result.isSuccess) {

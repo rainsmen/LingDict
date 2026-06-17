@@ -9,6 +9,7 @@ import com.lingdict.app.domain.model.StudyStatistics
 import com.lingdict.app.domain.repository.StudyRecordRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
@@ -122,6 +123,31 @@ class StudyRecordRepositoryImpl @Inject constructor(
      */
     suspend fun getTotalWordsReviewed(): Int {
         return studyRecordDao.getTotalWordsReviewed() ?: 0
+    }
+
+    /**
+     * 获取连续学习天数。若今天尚未学习但昨天学习过，保留截至昨天的连续天数。
+     */
+    suspend fun getStudyStreakDays(): Int {
+        val studyDates = studyRecordDao.getStudyDatesDesc()
+            .map { timestamp ->
+                Instant.ofEpochMilli(timestamp)
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDate()
+            }
+            .toSet()
+
+        var currentDate = LocalDate.now()
+        if (currentDate !in studyDates) {
+            currentDate = currentDate.minusDays(1)
+        }
+
+        var streak = 0
+        while (currentDate in studyDates) {
+            streak++
+            currentDate = currentDate.minusDays(1)
+        }
+        return streak
     }
 
     /**

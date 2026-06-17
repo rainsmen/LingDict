@@ -7,8 +7,6 @@ import com.lingdict.app.domain.model.DailyProgress
 import com.lingdict.app.domain.model.DailyRecord
 import com.lingdict.app.domain.model.MasteryDistribution
 import com.lingdict.app.domain.model.StudyStatistics
-import com.lingdict.app.domain.repository.StudyRecordRepository
-import com.lingdict.app.domain.repository.UserWordRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -26,10 +24,10 @@ class GetStatisticsUseCase @Inject constructor(
      * 获取完整统计数据
      * @param dailyGoal 每日学习目标
      */
-    suspend operator fun invoke(dailyGoal: Int = 20): StudyStatistics {
+    suspend operator fun invoke(dailyGoal: Int = 20, trendDays: Int = 7): StudyStatistics {
         return StudyStatistics(
             todayProgress = getTodayProgress(dailyGoal),
-            recentTrend = getRecentTrend(7),
+            recentTrend = getRecentTrend(trendDays),
             masteryDistribution = getMasteryDistribution(),
             studyStreak = getStudyStreak(),
             totalWordsLearned = studyRecordRepository.getTotalWordsLearned(),
@@ -102,7 +100,7 @@ class GetStatisticsUseCase @Inject constructor(
      * 获取连续学习天数
      */
     suspend fun getStudyStreak(): Int {
-        return userWordRepository.getStudyStreakDays()
+        return studyRecordRepository.getStudyStreakDays()
     }
 
     /**

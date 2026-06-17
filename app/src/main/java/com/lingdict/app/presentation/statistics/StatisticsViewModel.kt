@@ -62,7 +62,7 @@ class StatisticsViewModel @Inject constructor(
                 TimePeriod.YEAR -> 365
             }
             flow<StudyStatistics?> {
-                val stats = getStatisticsUseCase(days)
+                val stats = getStatisticsUseCase(dailyGoal = 20, trendDays = days)
                 emit(stats)
             }.catch { emit(null) }
         }

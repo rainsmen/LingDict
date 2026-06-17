@@ -93,6 +93,8 @@ class GenerateTestUseCase @Inject constructor(
         // 获取3个干扰项（发音相似或随机单词）
         val distractors = wordRepository.getRandomWords(3)
             .map { it.word }
+            .filter { it != correctAnswer }
+            .distinct()
             .take(3)
 
         // 组合并打乱选项
@@ -175,6 +177,7 @@ class GenerateTestUseCase @Inject constructor(
     suspend fun generateTest(count: Int, types: List<String> = emptyList()): List<Question> {
         // 获取用户的生词 - 使用first()而不是collect()
         val dueWords = userWordRepository.getDueWords(count).first()
+            .mapNotNull { enrichWithWordDetails(it) }
 
         if (dueWords.isEmpty()) {
             return emptyList()
@@ -208,5 +211,10 @@ class GenerateTestUseCase @Inject constructor(
      */
     suspend operator fun invoke(type: String, count: Int): List<Question> {
         return generateTest(count, listOf(type))
+    }
+
+    private suspend fun enrichWithWordDetails(userWord: UserWord): UserWord? {
+        val wordDetails = wordRepository.getWord(userWord.word.word) ?: return null
+        return userWord.copy(word = wordDetails)
     }
 }

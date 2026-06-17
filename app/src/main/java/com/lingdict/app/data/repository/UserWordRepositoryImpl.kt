@@ -239,15 +239,6 @@ class UserWordRepositoryImpl @Inject constructor(
     }
 
     /**
-     * 获取连续学习天数
-     */
-    suspend fun getStudyStreakDays(): Int {
-        // 简化实现：从30天前开始统计
-        val thirtyDaysAgo = System.currentTimeMillis() - 30 * 24 * 60 * 60 * 1000L
-        return userWordDao.getStudyStreakDays(thirtyDaysAgo)
-    }
-
-    /**
      * 获取今天开始的时间戳（00:00:00）
      * 修复：使用LocalDate处理时区问题
      */

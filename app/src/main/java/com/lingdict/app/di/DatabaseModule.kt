@@ -2,6 +2,8 @@ package com.lingdict.app.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.lingdict.app.data.local.LingDictDatabase
 import com.lingdict.app.data.local.dao.ExampleDao
 import com.lingdict.app.data.local.dao.StudyRecordDao
@@ -21,6 +23,12 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
+    private val MIGRATION_1_2 = object : Migration(1, 2) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            // Version 2 ships the pre-populated dictionary asset. Existing user data must not be dropped.
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(
@@ -32,7 +40,7 @@ object DatabaseModule {
             LingDictDatabase.DATABASE_NAME
         )
             .createFromAsset("database/words.db") // 从assets预填充词库
-            .fallbackToDestructiveMigration()
+            .addMigrations(MIGRATION_1_2)
             .build()
     }
 

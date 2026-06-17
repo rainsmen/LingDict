@@ -267,7 +267,7 @@ def process_ecdict(csv_path, output_db_path, limit=50000):
 
     # 按词频排序
     print("🔄 按词频排序...")
-    words_data.sort(key=lambda x: x['frequency'], reverse=True)
+    words_data.sort(key=lambda x: x['frequency'] if x['frequency'] > 0 else float('inf'))
     print("✅ 排序完成")
     print()
 
@@ -324,7 +324,7 @@ def process_ecdict(csv_path, output_db_path, limit=50000):
     cursor.execute('SELECT COUNT(*) FROM words')
     count = cursor.fetchone()[0]
 
-    cursor.execute('SELECT word FROM words ORDER BY frequency DESC LIMIT 10')
+    cursor.execute('SELECT word FROM words ORDER BY CASE WHEN frequency > 0 THEN 0 ELSE 1 END, frequency ASC LIMIT 10')
     top_words = [row[0] for row in cursor.fetchall()]
 
     conn.close()

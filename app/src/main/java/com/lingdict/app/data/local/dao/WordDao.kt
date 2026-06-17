@@ -15,7 +15,7 @@ interface WordDao {
      * @param query 查询关键词
      * @param limit 返回数量限制
      */
-    @Query("SELECT * FROM words WHERE word LIKE :query || '%' ORDER BY frequency DESC LIMIT :limit")
+    @Query("SELECT * FROM words WHERE word LIKE :query || '%' ORDER BY CASE WHEN frequency > 0 THEN 0 ELSE 1 END, frequency ASC LIMIT :limit")
     fun searchWords(query: String, limit: Int = 10): Flow<List<WordEntity>>
 
     /**
@@ -33,7 +33,7 @@ interface WordDao {
     /**
      * 按难度等级查询
      */
-    @Query("SELECT * FROM words WHERE level = :level ORDER BY frequency DESC")
+    @Query("SELECT * FROM words WHERE level = :level ORDER BY CASE WHEN frequency > 0 THEN 0 ELSE 1 END, frequency ASC")
     fun getWordsByLevel(level: String): Flow<List<WordEntity>>
 
     /**

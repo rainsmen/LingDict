@@ -37,6 +37,12 @@ interface StudyRecordDao {
     fun getAllRecords(): Flow<List<StudyRecordEntity>>
 
     /**
+     * 获取有学习行为的日期，用于计算连续学习天数。
+     */
+    @Query("SELECT date FROM study_records WHERE wordsLearned > 0 OR wordsReviewed > 0 OR testTotal > 0 ORDER BY date DESC")
+    suspend fun getStudyDatesDesc(): List<Long>
+
+    /**
      * 插入或更新学习记录
      */
     @Insert(onConflict = OnConflictStrategy.REPLACE)

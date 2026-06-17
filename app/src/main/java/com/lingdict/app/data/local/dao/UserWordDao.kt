@@ -116,10 +116,4 @@ interface UserWordDao {
      */
     @Query("SELECT COUNT(*) FROM user_words")
     suspend fun getUserWordCount(): Int
-
-    /**
-     * 获取连续学习天数（简化版：查询最近有记录的连续天数）
-     */
-    @Query("SELECT COUNT(DISTINCT date(addedDate / 1000, 'unixepoch')) FROM user_words WHERE addedDate >= :startDate")
-    suspend fun getStudyStreakDays(startDate: Long): Int
 }

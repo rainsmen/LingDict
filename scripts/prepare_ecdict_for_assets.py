@@ -73,7 +73,7 @@ def prepare_ecdict_for_assets(input_csv, output_path=None, limit=50000):
 
     # 按词频排序
     print("🔄 按词频排序...")
-    words_data.sort(key=lambda x: x[0], reverse=True)
+    words_data.sort(key=lambda x: x[0] if x[0] > 0 else float('inf'))
     print("✅ 排序完成")
     print()
 
