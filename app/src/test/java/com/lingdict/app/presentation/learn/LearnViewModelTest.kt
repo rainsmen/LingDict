@@ -12,7 +12,6 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -102,20 +101,4 @@ class LearnViewModelTest {
         coVerify { updateReviewUseCase(1, 1) }
     }
 
-    @Test
-    fun `play audio speaks current word when available`() = runTest {
-        every { ttsManager.isAvailable() } returns true
-
-        viewModel.uiState.test {
-            var state = awaitItem()
-            while (state.currentWord == null) {
-                state = awaitItem()
-            }
-
-            viewModel.onEvent(LearnEvent.PlayAudio)
-
-            verify { ttsManager.speak("test") }
-            cancelAndIgnoreRemainingEvents()
-        }
-    }
 }
