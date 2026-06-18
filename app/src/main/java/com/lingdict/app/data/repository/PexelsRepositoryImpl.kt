@@ -1,8 +1,10 @@
 package com.lingdict.app.data.repository
 
 import com.lingdict.app.BuildConfig
+import com.lingdict.app.data.datastore.SettingsDataStore
 import com.lingdict.app.data.remote.PexelsApiService
 import com.lingdict.app.domain.repository.PexelsRepository
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -11,7 +13,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class PexelsRepositoryImpl @Inject constructor(
-    private val pexelsApi: PexelsApiService
+    private val pexelsApi: PexelsApiService,
+    private val settingsDataStore: SettingsDataStore
 ) : PexelsRepository {
 
     /**
@@ -36,13 +39,14 @@ class PexelsRepositoryImpl @Inject constructor(
      * @return 图片URL，失败返回null
      */
     private suspend fun searchWordImage(word: String): String? {
-        if (BuildConfig.PEXELS_API_KEY.isBlank()) return null
+        val apiKey = settingsDataStore.userSettingsFlow.first().pexelsApiKey.ifBlank { BuildConfig.PEXELS_API_KEY }
+        if (apiKey.isBlank()) return null
 
         return try {
             val response = pexelsApi.searchPhotos(
                 query = word,
                 perPage = 1,
-                apiKey = BuildConfig.PEXELS_API_KEY
+                apiKey = apiKey
             )
 
             if (response.photos.isNotEmpty()) {

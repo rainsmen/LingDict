@@ -65,7 +65,12 @@ fun SettingsScreen(
         onDailyReviewGoalChange = viewModel::updateDailyReviewGoal,
         onAutoPlayAudioChange = viewModel::updateAutoPlayAudio,
         onShowPhoneticChange = viewModel::updateShowPhonetic,
-        onCardBackgroundChange = viewModel::updateCardBackground
+        onCardBackgroundChange = viewModel::updateCardBackground,
+        onYoudaoEnabledChange = viewModel::updateYoudaoEnabled,
+        onYoudaoCredentialsChange = viewModel::updateYoudaoCredentials,
+        onPexelsApiKeyChange = viewModel::updatePexelsApiKey,
+        onFreeDictionaryEnabledChange = viewModel::updateFreeDictionaryEnabled,
+        onDatamuseEnabledChange = viewModel::updateDatamuseEnabled
     )
 }
 
@@ -83,7 +88,12 @@ fun SettingsContent(
     onDailyReviewGoalChange: (Int) -> Unit = {},
     onAutoPlayAudioChange: (Boolean) -> Unit = {},
     onShowPhoneticChange: (Boolean) -> Unit = {},
-    onCardBackgroundChange: (Boolean) -> Unit = {}
+    onCardBackgroundChange: (Boolean) -> Unit = {},
+    onYoudaoEnabledChange: (Boolean) -> Unit = {},
+    onYoudaoCredentialsChange: (String, String) -> Unit = { _, _ -> },
+    onPexelsApiKeyChange: (String) -> Unit = {},
+    onFreeDictionaryEnabledChange: (Boolean) -> Unit = {},
+    onDatamuseEnabledChange: (Boolean) -> Unit = {}
 ) {
     var learningGoalDialogVisible by remember { mutableStateOf(false) }
     var reviewGoalDialogVisible by remember { mutableStateOf(false) }
@@ -93,6 +103,7 @@ fun SettingsContent(
     var reviewGoalText by remember(userSettings.dailyReviewGoal) {
         mutableStateOf(userSettings.dailyReviewGoal.toString())
     }
+    var apiDialogVisible by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -176,6 +187,18 @@ fun SettingsContent(
 
             Divider()
 
+            // Online API Section
+            SettingsSection(title = "在线词典") {
+                SettingsItem(
+                    icon = Icons.Default.Cloud,
+                    title = "在线查询与 API",
+                    subtitle = "有道、Free Dictionary、Datamuse、Pexels",
+                    onClick = { apiDialogVisible = true }
+                )
+            }
+
+            Divider()
+
             // Data Section
             SettingsSection(title = "数据") {
                 SettingsItem(
@@ -205,6 +228,18 @@ fun SettingsContent(
                 )
             }
         }
+    }
+
+    if (apiDialogVisible) {
+        ApiSettingsDialog(
+            userSettings = userSettings,
+            onDismiss = { apiDialogVisible = false },
+            onYoudaoEnabledChange = onYoudaoEnabledChange,
+            onYoudaoCredentialsChange = onYoudaoCredentialsChange,
+            onPexelsApiKeyChange = onPexelsApiKeyChange,
+            onFreeDictionaryEnabledChange = onFreeDictionaryEnabledChange,
+            onDatamuseEnabledChange = onDatamuseEnabledChange
+        )
     }
 
     if (learningGoalDialogVisible) {
@@ -243,6 +278,86 @@ fun SettingsContent(
             }
         )
     }
+}
+
+@Composable
+private fun ApiSettingsDialog(
+    userSettings: UserSettings,
+    onDismiss: () -> Unit,
+    onYoudaoEnabledChange: (Boolean) -> Unit,
+    onYoudaoCredentialsChange: (String, String) -> Unit,
+    onPexelsApiKeyChange: (String) -> Unit,
+    onFreeDictionaryEnabledChange: (Boolean) -> Unit,
+    onDatamuseEnabledChange: (Boolean) -> Unit
+) {
+    var youdaoAppKey by remember(userSettings.youdaoAppKey) { mutableStateOf(userSettings.youdaoAppKey) }
+    var youdaoAppSecret by remember(userSettings.youdaoAppSecret) { mutableStateOf(userSettings.youdaoAppSecret) }
+    var pexelsApiKey by remember(userSettings.pexelsApiKey) { mutableStateOf(userSettings.pexelsApiKey) }
+    var youdaoEnabled by remember(userSettings.youdaoEnabled) { mutableStateOf(userSettings.youdaoEnabled) }
+    var freeDictionaryEnabled by remember(userSettings.freeDictionaryEnabled) { mutableStateOf(userSettings.freeDictionaryEnabled) }
+    var datamuseEnabled by remember(userSettings.datamuseEnabled) { mutableStateOf(userSettings.datamuseEnabled) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("在线查询与 API") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("有道词典", modifier = Modifier.weight(1f))
+                    Switch(checked = youdaoEnabled, onCheckedChange = { youdaoEnabled = it })
+                }
+                OutlinedTextField(
+                    value = youdaoAppKey,
+                    onValueChange = { youdaoAppKey = it },
+                    label = { Text("有道 APP_KEY") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = youdaoAppSecret,
+                    onValueChange = { youdaoAppSecret = it },
+                    label = { Text("有道 APP_SECRET") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Divider()
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Free Dictionary", modifier = Modifier.weight(1f))
+                    Switch(checked = freeDictionaryEnabled, onCheckedChange = { freeDictionaryEnabled = it })
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Datamuse", modifier = Modifier.weight(1f))
+                    Switch(checked = datamuseEnabled, onCheckedChange = { datamuseEnabled = it })
+                }
+                Divider()
+                OutlinedTextField(
+                    value = pexelsApiKey,
+                    onValueChange = { pexelsApiKey = it },
+                    label = { Text("Pexels API_KEY") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                onYoudaoEnabledChange(youdaoEnabled)
+                onYoudaoCredentialsChange(youdaoAppKey, youdaoAppSecret)
+                onPexelsApiKeyChange(pexelsApiKey)
+                onFreeDictionaryEnabledChange(freeDictionaryEnabled)
+                onDatamuseEnabledChange(datamuseEnabled)
+                onDismiss()
+            }) { Text("保存") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("取消") }
+        }
+    )
 }
 
 @Composable
@@ -393,7 +508,10 @@ fun SettingsScreenPreview() {
                 dailyReviewGoal = 30,
                 autoPlayAudio = false,
                 showPhonetic = true,
-                cardBackgroundEnabled = true
+                cardBackgroundEnabled = true,
+                youdaoEnabled = true,
+                freeDictionaryEnabled = true,
+                datamuseEnabled = true
             )
         )
     }

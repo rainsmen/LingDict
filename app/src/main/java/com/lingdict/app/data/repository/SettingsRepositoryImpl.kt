@@ -43,4 +43,24 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun updateCardBackground(enabled: Boolean) {
         settingsDataStore.updateCardBackground(enabled)
     }
+
+    override suspend fun updateYoudaoEnabled(enabled: Boolean) {
+        settingsDataStore.updateYoudaoEnabled(enabled)
+    }
+
+    override suspend fun updateYoudaoCredentials(appKey: String, appSecret: String) {
+        settingsDataStore.updateYoudaoCredentials(appKey, appSecret)
+    }
+
+    override suspend fun updatePexelsApiKey(apiKey: String) {
+        settingsDataStore.updatePexelsApiKey(apiKey)
+    }
+
+    override suspend fun updateFreeDictionaryEnabled(enabled: Boolean) {
+        settingsDataStore.updateFreeDictionaryEnabled(enabled)
+    }
+
+    override suspend fun updateDatamuseEnabled(enabled: Boolean) {
+        settingsDataStore.updateDatamuseEnabled(enabled)
+    }
 }

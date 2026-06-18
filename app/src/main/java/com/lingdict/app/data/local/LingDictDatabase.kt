@@ -15,7 +15,7 @@ import com.lingdict.app.data.local.entity.WordEntity
 /**
  * LingDict应用数据库
  *
- * 版本2：从assets预填充ECDICT词库（50,000词条）
+ * 版本3：刷新预填充ECDICT词库为高频50,000词条
  */
 @Database(
     entities = [
@@ -24,7 +24,7 @@ import com.lingdict.app.data.local.entity.WordEntity
         ExampleEntity::class,
         StudyRecordEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

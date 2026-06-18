@@ -12,4 +12,9 @@ interface SettingsRepository {
     suspend fun updateAutoPlayAudio(enabled: Boolean)
     suspend fun updateShowPhonetic(enabled: Boolean)
     suspend fun updateCardBackground(enabled: Boolean)
+    suspend fun updateYoudaoEnabled(enabled: Boolean)
+    suspend fun updateYoudaoCredentials(appKey: String, appSecret: String)
+    suspend fun updatePexelsApiKey(apiKey: String)
+    suspend fun updateFreeDictionaryEnabled(enabled: Boolean)
+    suspend fun updateDatamuseEnabled(enabled: Boolean)
 }

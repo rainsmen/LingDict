@@ -1,6 +1,7 @@
 package com.lingdict.app.di
 
 import com.lingdict.app.BuildConfig
+import com.lingdict.app.data.remote.DatamuseApiService
 import com.lingdict.app.data.remote.FreeDictionaryApiService
 import com.lingdict.app.data.remote.PexelsApiService
 import com.lingdict.app.data.remote.YoudaoApiService
@@ -35,10 +36,20 @@ object NetworkModule {
     @Retention(AnnotationRetention.BINARY)
     annotation class FreeDictionaryRetrofit
 
+    @Qualifier
+    @Retention(AnnotationRetention.BINARY)
+    annotation class DatamuseRetrofit
+
     @Provides
     @Singleton
     fun provideOkHttpClient(): OkHttpClient {
         return OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val request = chain.request().newBuilder()
+                    .header("User-Agent", "LingDict/1.0")
+                    .build()
+                chain.proceed(request)
+            }
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
@@ -89,6 +100,17 @@ object NetworkModule {
 
     @Provides
     @Singleton
+    @DatamuseRetrofit
+    fun provideDatamuseRetrofit(okHttpClient: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(DatamuseApiService.BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
+    @Provides
+    @Singleton
     fun provideYoudaoApiService(@YoudaoRetrofit retrofit: Retrofit): YoudaoApiService {
         return retrofit.create(YoudaoApiService::class.java)
     }
@@ -103,5 +125,11 @@ object NetworkModule {
     @Singleton
     fun provideFreeDictionaryApiService(@FreeDictionaryRetrofit retrofit: Retrofit): FreeDictionaryApiService {
         return retrofit.create(FreeDictionaryApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideDatamuseApiService(@DatamuseRetrofit retrofit: Retrofit): DatamuseApiService {
+        return retrofit.create(DatamuseApiService::class.java)
     }
 }

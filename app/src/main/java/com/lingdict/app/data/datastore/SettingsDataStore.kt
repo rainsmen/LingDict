@@ -22,7 +22,13 @@ data class UserSettings(
     val dailyReviewGoal: Int = 30,
     val autoPlayAudio: Boolean = false,
     val showPhonetic: Boolean = true,
-    val cardBackgroundEnabled: Boolean = true
+    val cardBackgroundEnabled: Boolean = true,
+    val youdaoEnabled: Boolean = true,
+    val youdaoAppKey: String = "",
+    val youdaoAppSecret: String = "",
+    val pexelsApiKey: String = "",
+    val freeDictionaryEnabled: Boolean = true,
+    val datamuseEnabled: Boolean = true
 )
 
 @Singleton
@@ -40,6 +46,12 @@ class SettingsDataStore @Inject constructor(
         val AUTO_PLAY_AUDIO = booleanPreferencesKey("auto_play_audio")
         val SHOW_PHONETIC = booleanPreferencesKey("show_phonetic")
         val CARD_BACKGROUND_ENABLED = booleanPreferencesKey("card_background_enabled")
+        val YOUDAO_ENABLED = booleanPreferencesKey("youdao_enabled")
+        val YOUDAO_APP_KEY = stringPreferencesKey("youdao_app_key")
+        val YOUDAO_APP_SECRET = stringPreferencesKey("youdao_app_secret")
+        val PEXELS_API_KEY = stringPreferencesKey("pexels_api_key")
+        val FREE_DICTIONARY_ENABLED = booleanPreferencesKey("free_dictionary_enabled")
+        val DATAMUSE_ENABLED = booleanPreferencesKey("datamuse_enabled")
     }
 
     // Read settings as Flow
@@ -59,7 +71,13 @@ class SettingsDataStore @Inject constructor(
                 dailyReviewGoal = preferences[PreferencesKeys.DAILY_REVIEW_GOAL] ?: 30,
                 autoPlayAudio = preferences[PreferencesKeys.AUTO_PLAY_AUDIO] ?: false,
                 showPhonetic = preferences[PreferencesKeys.SHOW_PHONETIC] ?: true,
-                cardBackgroundEnabled = preferences[PreferencesKeys.CARD_BACKGROUND_ENABLED] ?: true
+                cardBackgroundEnabled = preferences[PreferencesKeys.CARD_BACKGROUND_ENABLED] ?: true,
+                youdaoEnabled = preferences[PreferencesKeys.YOUDAO_ENABLED] ?: true,
+                youdaoAppKey = preferences[PreferencesKeys.YOUDAO_APP_KEY].orEmpty(),
+                youdaoAppSecret = preferences[PreferencesKeys.YOUDAO_APP_SECRET].orEmpty(),
+                pexelsApiKey = preferences[PreferencesKeys.PEXELS_API_KEY].orEmpty(),
+                freeDictionaryEnabled = preferences[PreferencesKeys.FREE_DICTIONARY_ENABLED] ?: true,
+                datamuseEnabled = preferences[PreferencesKeys.DATAMUSE_ENABLED] ?: true
             )
         }
 
@@ -109,6 +127,37 @@ class SettingsDataStore @Inject constructor(
     suspend fun updateCardBackground(enabled: Boolean) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.CARD_BACKGROUND_ENABLED] = enabled
+        }
+    }
+
+    suspend fun updateYoudaoEnabled(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.YOUDAO_ENABLED] = enabled
+        }
+    }
+
+    suspend fun updateYoudaoCredentials(appKey: String, appSecret: String) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.YOUDAO_APP_KEY] = appKey.trim()
+            preferences[PreferencesKeys.YOUDAO_APP_SECRET] = appSecret.trim()
+        }
+    }
+
+    suspend fun updatePexelsApiKey(apiKey: String) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.PEXELS_API_KEY] = apiKey.trim()
+        }
+    }
+
+    suspend fun updateFreeDictionaryEnabled(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.FREE_DICTIONARY_ENABLED] = enabled
+        }
+    }
+
+    suspend fun updateDatamuseEnabled(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.DATAMUSE_ENABLED] = enabled
         }
     }
 

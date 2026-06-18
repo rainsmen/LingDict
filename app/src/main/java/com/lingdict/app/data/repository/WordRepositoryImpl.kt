@@ -4,8 +4,10 @@ import com.lingdict.app.BuildConfig
 import com.lingdict.app.data.local.dao.ExampleDao
 import com.lingdict.app.data.local.dao.WordDao
 import com.lingdict.app.data.local.entity.ExampleEntity
+import com.lingdict.app.data.datastore.SettingsDataStore
 import com.lingdict.app.data.local.entity.WordEntity
 import com.lingdict.app.data.mapper.toWordEntity
+import com.lingdict.app.data.remote.DatamuseApiService
 import com.lingdict.app.data.remote.FreeDictionaryApiService
 import com.lingdict.app.data.remote.dto.FreeDictionaryDefinition
 import com.lingdict.app.data.remote.YoudaoApiService
@@ -28,7 +30,9 @@ class WordRepositoryImpl @Inject constructor(
     private val wordDao: WordDao,
     private val exampleDao: ExampleDao,
     private val youdaoApi: YoudaoApiService,
-    private val freeDictionaryApi: FreeDictionaryApiService
+    private val freeDictionaryApi: FreeDictionaryApiService,
+    private val datamuseApi: DatamuseApiService,
+    private val settingsDataStore: SettingsDataStore
 ) : WordRepository {
 
     /**
@@ -81,30 +85,11 @@ class WordRepositoryImpl @Inject constructor(
                 return Result.success(localWord)
             }
 
-            // 2. 调用有道API
-            val salt = YoudaoSignUtil.generateSalt()
-            val curtime = YoudaoSignUtil.getCurrentTime()
-            val sign = YoudaoSignUtil.generateSign(
-                appKey = BuildConfig.YOUDAO_APP_KEY,
-                appSecret = BuildConfig.YOUDAO_APP_SECRET,
-                query = word,
-                salt = salt,
-                curtime = curtime
-            )
-
-            val response = youdaoApi.translate(
-                query = word,
-                appKey = BuildConfig.YOUDAO_APP_KEY,
-                salt = salt,
-                sign = sign,
-                curtime = curtime
-            )
-
-            // 3. 转换并缓存
-            val wordEntity = response.toWordEntity()
-            if (wordEntity != null) {
-                wordDao.insertWord(wordEntity)
-                Result.success(wordEntity)
+            val settings = settingsDataStore.userSettingsFlow.first()
+            val youdaoWord = getWordFromYoudao(word, settings)
+            if (youdaoWord != null) {
+                wordDao.insertWord(youdaoWord)
+                Result.success(youdaoWord)
             } else {
                 commonFallback(word)?.let { commonWord ->
                     wordDao.insertWord(commonWord.toWordEntity(word))
@@ -112,9 +97,12 @@ class WordRepositoryImpl @Inject constructor(
                     return Result.success(commonWord.toWordEntity(word))
                 }
 
-                getWordFromFreeDictionary(word)?.let { fallbackWord ->
-                    wordDao.insertWord(fallbackWord)
-                    Result.success(fallbackWord)
+                getWordFromOnlineFallbacks(word)?.let { fallback ->
+                    wordDao.insertWord(fallback.word)
+                    if (fallback.examples.isNotEmpty()) {
+                        exampleDao.insertExamples(fallback.examples)
+                    }
+                    Result.success(fallback.word)
                 } ?: Result.failure(Exception("单词未找到或在线词典暂不可用"))
             }
 
@@ -125,9 +113,12 @@ class WordRepositoryImpl @Inject constructor(
                 return Result.success(commonWord.toWordEntity(word))
             }
 
-            getWordFromFreeDictionary(word)?.let { fallbackWord ->
-                wordDao.insertWord(fallbackWord)
-                Result.success(fallbackWord)
+            getWordFromOnlineFallbacks(word)?.let { fallback ->
+                wordDao.insertWord(fallback.word)
+                if (fallback.examples.isNotEmpty()) {
+                    exampleDao.insertExamples(fallback.examples)
+                }
+                Result.success(fallback.word)
             } ?: Result.failure(e)
         }
     }
@@ -184,29 +175,75 @@ class WordRepositoryImpl @Inject constructor(
         val common = commonFallback(normalized)
         val shouldFetchOnline = word.phonetic.isNullOrBlank() || word.audio.isNullOrBlank()
 
-        val online = if (shouldFetchOnline) getWordFromFreeDictionary(normalized) else null
+        val online = if (shouldFetchOnline) getWordFromOnlineFallbacks(normalized) else null
         val enriched = word.copy(
             phonetic = word.phonetic?.takeIf { it.isNotBlank() }
                 ?: common?.phonetic
-                ?: online?.phonetic,
-            audio = word.audio?.takeIf { it.isNotBlank() } ?: online?.audio,
-            definition = word.definition.ifBlank { common?.definition ?: online?.definition.orEmpty() },
-            translation = word.translation.ifBlank { common?.translation ?: online?.translation.orEmpty() },
-            pos = word.pos ?: common?.pos ?: online?.pos
+                ?: online?.word?.phonetic,
+            audio = word.audio?.takeIf { it.isNotBlank() } ?: online?.word?.audio,
+            definition = word.definition.ifBlank { common?.definition ?: online?.word?.definition.orEmpty() },
+            translation = word.translation.ifBlank { common?.translation ?: online?.word?.translation.orEmpty() },
+            pos = word.pos ?: common?.pos ?: online?.word?.pos
         )
 
         if (enriched != word) {
             wordDao.insertWord(enriched)
         }
-        common?.toExampleEntities(enriched.word)?.takeIf { it.isNotEmpty() }?.let { examples ->
-            if (exampleDao.getExamples(enriched.word).first().isEmpty()) {
+        if (exampleDao.getExamples(enriched.word).first().isEmpty()) {
+            val examples = common?.toExampleEntities(enriched.word)?.takeIf { it.isNotEmpty() }
+                ?: online?.examples.orEmpty()
+            if (examples.isNotEmpty()) {
                 exampleDao.insertExamples(examples)
             }
         }
         return enriched
     }
 
-    private suspend fun getWordFromFreeDictionary(word: String): WordEntity? {
+    private data class OnlineLookupResult(
+        val word: WordEntity,
+        val examples: List<ExampleEntity> = emptyList()
+    )
+
+    private suspend fun getWordFromYoudao(word: String, settings: com.lingdict.app.data.datastore.UserSettings): WordEntity? {
+        if (!settings.youdaoEnabled) return null
+        val appKey = settings.youdaoAppKey.ifBlank { BuildConfig.YOUDAO_APP_KEY }
+        val appSecret = settings.youdaoAppSecret.ifBlank { BuildConfig.YOUDAO_APP_SECRET }
+        if (appKey.isBlank() || appSecret.isBlank()) return null
+
+        return try {
+            val salt = YoudaoSignUtil.generateSalt()
+            val curtime = YoudaoSignUtil.getCurrentTime()
+            val sign = YoudaoSignUtil.generateSign(
+                appKey = appKey,
+                appSecret = appSecret,
+                query = word,
+                salt = salt,
+                curtime = curtime
+            )
+            youdaoApi.translate(
+                query = word,
+                appKey = appKey,
+                salt = salt,
+                sign = sign,
+                curtime = curtime
+            ).toWordEntity()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private suspend fun getWordFromOnlineFallbacks(word: String): OnlineLookupResult? {
+        val settings = settingsDataStore.userSettingsFlow.first()
+        if (settings.freeDictionaryEnabled) {
+            getWordFromFreeDictionary(word)?.let { return it }
+        }
+        if (settings.datamuseEnabled) {
+            getWordFromDatamuse(word)?.let { return it }
+        }
+        return null
+    }
+
+    private suspend fun getWordFromFreeDictionary(word: String): OnlineLookupResult? {
         return try {
             val entry = freeDictionaryApi.lookup(word.trim().lowercase()).firstOrNull() ?: return null
             val meanings = entry.meanings.orEmpty()
@@ -223,22 +260,48 @@ class WordRepositoryImpl @Inject constructor(
             val resolvedWord = entry.word?.ifBlank { word } ?: word
 
             val examples = definitions.toExamples(resolvedWord)
-            if (examples.isNotEmpty()) {
-                exampleDao.insertExamples(examples)
-            }
 
-            WordEntity(
-                word = resolvedWord,
-                phonetic = phonetic?.takeIf { it.isNotBlank() },
-                definition = definitions.take(2).mapNotNull { it.definition }.joinToString("; ").ifBlank { firstDefinition },
-                translation = firstDefinition,
-                pos = firstMeaning?.partOfSpeech,
-                audio = audio,
-                addedTime = System.currentTimeMillis()
+            OnlineLookupResult(
+                word = WordEntity(
+                    word = resolvedWord,
+                    phonetic = phonetic?.takeIf { it.isNotBlank() },
+                    definition = definitions.take(2).mapNotNull { it.definition }.joinToString("; ").ifBlank { firstDefinition },
+                    translation = firstDefinition,
+                    pos = firstMeaning?.partOfSpeech,
+                    audio = audio,
+                    addedTime = System.currentTimeMillis()
+                ),
+                examples = examples
             )
         } catch (e: Exception) {
             null
         }
+    }
+
+    private suspend fun getWordFromDatamuse(word: String): OnlineLookupResult? {
+        return try {
+            val result = datamuseApi.words(spelling = word.trim().lowercase(), metadata = "dps", max = 1).firstOrNull()
+                ?: return null
+            val definition = result.definitions.orEmpty().firstOrNull().toCleanDatamuseDefinition() ?: return null
+            val pos = result.tags.orEmpty().firstOrNull { it.length <= 5 && it.all(Char::isLetter) }
+
+            OnlineLookupResult(
+                word = WordEntity(
+                    word = result.word?.ifBlank { word } ?: word,
+                    definition = definition,
+                    translation = definition,
+                    pos = pos,
+                    addedTime = System.currentTimeMillis()
+                )
+            )
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun String?.toCleanDatamuseDefinition(): String? {
+        val value = this?.substringAfter('\t', this)?.trim().orEmpty()
+        return value.takeIf { it.isNotBlank() }
     }
 
     private fun List<FreeDictionaryDefinition>.toExamples(word: String): List<ExampleEntity> {

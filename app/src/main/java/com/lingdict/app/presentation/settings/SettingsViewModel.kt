@@ -100,4 +100,34 @@ class SettingsViewModel @Inject constructor(
             settingsRepository.updateCardBackground(enabled)
         }
     }
+
+    fun updateYoudaoEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.updateYoudaoEnabled(enabled)
+        }
+    }
+
+    fun updateYoudaoCredentials(appKey: String, appSecret: String) {
+        viewModelScope.launch {
+            settingsRepository.updateYoudaoCredentials(appKey, appSecret)
+        }
+    }
+
+    fun updatePexelsApiKey(apiKey: String) {
+        viewModelScope.launch {
+            settingsRepository.updatePexelsApiKey(apiKey)
+        }
+    }
+
+    fun updateFreeDictionaryEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.updateFreeDictionaryEnabled(enabled)
+        }
+    }
+
+    fun updateDatamuseEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.updateDatamuseEnabled(enabled)
+        }
+    }
 }

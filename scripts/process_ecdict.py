@@ -124,7 +124,7 @@ def process_ecdict(csv_path, output_db_path, limit=50000):
     conn = sqlite3.connect(output_db_path)
     cursor = conn.cursor()
 
-    cursor.execute('PRAGMA user_version=2')
+    cursor.execute('PRAGMA user_version=3')
 
     # 创建表（与当前 Room schema 保持一致）
     cursor.executescript('''
