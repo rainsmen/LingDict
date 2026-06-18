@@ -1,6 +1,8 @@
 package com.lingdict.app.di
 
 import android.content.Context
+import android.database.Cursor
+import android.database.sqlite.SQLiteDatabase
 import androidx.room.Room
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
@@ -47,32 +49,101 @@ object DatabaseModule {
             }
         }
 
-        var attached = false
+        var assetDatabase: SQLiteDatabase? = null
         try {
-            database.execSQL("ATTACH DATABASE '${quoteSqlLiteral(assetFile.absolutePath)}' AS asset_dict")
-            attached = true
+            database.execSQL("DROP TABLE IF EXISTS migration_words")
+            database.execSQL(
+                """
+                CREATE TEMP TABLE migration_words (
+                    word TEXT NOT NULL PRIMARY KEY,
+                    phonetic TEXT,
+                    phoneticUs TEXT,
+                    phoneticUk TEXT,
+                    definition TEXT NOT NULL,
+                    translation TEXT NOT NULL,
+                    level TEXT,
+                    frequency INTEGER NOT NULL,
+                    exchange TEXT,
+                    collins INTEGER,
+                    bnc INTEGER,
+                    frq INTEGER,
+                    tag TEXT,
+                    addedTime INTEGER NOT NULL,
+                    pos TEXT,
+                    oxford INTEGER,
+                    detail TEXT,
+                    audio TEXT
+                )
+                """.trimIndent()
+            )
+
+            assetDatabase = SQLiteDatabase.openDatabase(
+                assetFile.absolutePath,
+                null,
+                SQLiteDatabase.OPEN_READONLY
+            )
+            assetDatabase.rawQuery(
+                """
+                SELECT word, phonetic, phoneticUs, phoneticUk, definition, translation, level,
+                       frequency, exchange, collins, bnc, frq, tag, addedTime, pos, oxford, detail, audio
+                FROM words
+                """.trimIndent(),
+                null
+            ).use { cursor ->
+                while (cursor.moveToNext()) {
+                    database.execSQL(
+                        """
+                        INSERT INTO migration_words (
+                            word, phonetic, phoneticUs, phoneticUk, definition, translation, level,
+                            frequency, exchange, collins, bnc, frq, tag, addedTime, pos, oxford, detail, audio
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """.trimIndent(),
+                        arrayOf(
+                            cursor.getStringOrNull(0),
+                            cursor.getStringOrNull(1),
+                            cursor.getStringOrNull(2),
+                            cursor.getStringOrNull(3),
+                            cursor.getStringOrNull(4).orEmpty(),
+                            cursor.getStringOrNull(5).orEmpty(),
+                            cursor.getStringOrNull(6),
+                            cursor.getIntOrZero(7),
+                            cursor.getStringOrNull(8),
+                            cursor.getIntOrNull(9),
+                            cursor.getIntOrNull(10),
+                            cursor.getIntOrNull(11),
+                            cursor.getStringOrNull(12),
+                            cursor.getLongOrZero(13),
+                            cursor.getStringOrNull(14),
+                            cursor.getIntOrNull(15),
+                            cursor.getStringOrNull(16),
+                            cursor.getStringOrNull(17)
+                        )
+                    )
+                }
+            }
+
             database.execSQL(
                 """
                 UPDATE words
                 SET
-                    phonetic = (SELECT phonetic FROM asset_dict.words WHERE asset_dict.words.word = words.word),
-                    phoneticUs = (SELECT phoneticUs FROM asset_dict.words WHERE asset_dict.words.word = words.word),
-                    phoneticUk = (SELECT phoneticUk FROM asset_dict.words WHERE asset_dict.words.word = words.word),
-                    definition = (SELECT definition FROM asset_dict.words WHERE asset_dict.words.word = words.word),
-                    translation = (SELECT translation FROM asset_dict.words WHERE asset_dict.words.word = words.word),
-                    level = (SELECT level FROM asset_dict.words WHERE asset_dict.words.word = words.word),
-                    frequency = (SELECT frequency FROM asset_dict.words WHERE asset_dict.words.word = words.word),
-                    exchange = (SELECT exchange FROM asset_dict.words WHERE asset_dict.words.word = words.word),
-                    collins = (SELECT collins FROM asset_dict.words WHERE asset_dict.words.word = words.word),
-                    bnc = (SELECT bnc FROM asset_dict.words WHERE asset_dict.words.word = words.word),
-                    frq = (SELECT frq FROM asset_dict.words WHERE asset_dict.words.word = words.word),
-                    tag = (SELECT tag FROM asset_dict.words WHERE asset_dict.words.word = words.word),
-                    addedTime = (SELECT addedTime FROM asset_dict.words WHERE asset_dict.words.word = words.word),
-                    pos = (SELECT pos FROM asset_dict.words WHERE asset_dict.words.word = words.word),
-                    oxford = (SELECT oxford FROM asset_dict.words WHERE asset_dict.words.word = words.word),
-                    detail = (SELECT detail FROM asset_dict.words WHERE asset_dict.words.word = words.word),
-                    audio = COALESCE(words.audio, (SELECT audio FROM asset_dict.words WHERE asset_dict.words.word = words.word))
-                WHERE word IN (SELECT word FROM asset_dict.words)
+                    phonetic = (SELECT phonetic FROM migration_words WHERE migration_words.word = words.word),
+                    phoneticUs = (SELECT phoneticUs FROM migration_words WHERE migration_words.word = words.word),
+                    phoneticUk = (SELECT phoneticUk FROM migration_words WHERE migration_words.word = words.word),
+                    definition = (SELECT definition FROM migration_words WHERE migration_words.word = words.word),
+                    translation = (SELECT translation FROM migration_words WHERE migration_words.word = words.word),
+                    level = (SELECT level FROM migration_words WHERE migration_words.word = words.word),
+                    frequency = (SELECT frequency FROM migration_words WHERE migration_words.word = words.word),
+                    exchange = (SELECT exchange FROM migration_words WHERE migration_words.word = words.word),
+                    collins = (SELECT collins FROM migration_words WHERE migration_words.word = words.word),
+                    bnc = (SELECT bnc FROM migration_words WHERE migration_words.word = words.word),
+                    frq = (SELECT frq FROM migration_words WHERE migration_words.word = words.word),
+                    tag = (SELECT tag FROM migration_words WHERE migration_words.word = words.word),
+                    addedTime = (SELECT addedTime FROM migration_words WHERE migration_words.word = words.word),
+                    pos = (SELECT pos FROM migration_words WHERE migration_words.word = words.word),
+                    oxford = (SELECT oxford FROM migration_words WHERE migration_words.word = words.word),
+                    detail = (SELECT detail FROM migration_words WHERE migration_words.word = words.word),
+                    audio = COALESCE(words.audio, (SELECT audio FROM migration_words WHERE migration_words.word = words.word))
+                WHERE word IN (SELECT word FROM migration_words)
                 """.trimIndent()
             )
             database.execSQL(
@@ -84,27 +155,38 @@ object DatabaseModule {
                 SELECT
                     word, phonetic, phoneticUs, phoneticUk, definition, translation, level, frequency,
                     exchange, collins, bnc, frq, tag, addedTime, pos, oxford, detail, audio
-                FROM asset_dict.words
+                FROM migration_words
                 """.trimIndent()
             )
             database.execSQL(
                 """
                 DELETE FROM words
-                WHERE word NOT IN (SELECT word FROM asset_dict.words)
+                WHERE word NOT IN (SELECT word FROM migration_words)
                   AND word NOT IN (SELECT word FROM user_words)
                   AND word NOT IN (SELECT word FROM examples)
                 """.trimIndent()
             )
+            database.execSQL("DROP TABLE migration_words")
         } finally {
-            if (attached) {
-                runCatching { database.execSQL("DETACH DATABASE asset_dict") }
-            }
+            assetDatabase?.close()
             assetFile.delete()
         }
     }
 
-    private fun quoteSqlLiteral(value: String): String {
-        return value.replace("'", "''")
+    private fun Cursor.getStringOrNull(index: Int): String? {
+        return if (isNull(index)) null else getString(index)
+    }
+
+    private fun Cursor.getIntOrNull(index: Int): Int? {
+        return if (isNull(index)) null else getInt(index)
+    }
+
+    private fun Cursor.getIntOrZero(index: Int): Int {
+        return if (isNull(index)) 0 else getInt(index)
+    }
+
+    private fun Cursor.getLongOrZero(index: Int): Long {
+        return if (isNull(index)) 0L else getLong(index)
     }
 
     @Provides
