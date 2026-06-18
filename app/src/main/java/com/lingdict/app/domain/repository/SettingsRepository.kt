@@ -15,6 +15,9 @@ interface SettingsRepository {
     suspend fun updateYoudaoEnabled(enabled: Boolean)
     suspend fun updateYoudaoCredentials(appKey: String, appSecret: String)
     suspend fun updatePexelsApiKey(apiKey: String)
+    suspend fun updateOnlineLookupPreferred(enabled: Boolean)
     suspend fun updateFreeDictionaryEnabled(enabled: Boolean)
     suspend fun updateDatamuseEnabled(enabled: Boolean)
+    suspend fun updateMerriamSettings(enabled: Boolean, apiKey: String)
+    suspend fun updateWordsApiSettings(enabled: Boolean, apiKey: String, host: String)
 }

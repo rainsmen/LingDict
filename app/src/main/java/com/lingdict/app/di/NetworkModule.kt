@@ -3,8 +3,10 @@ package com.lingdict.app.di
 import com.lingdict.app.BuildConfig
 import com.lingdict.app.data.remote.DatamuseApiService
 import com.lingdict.app.data.remote.FreeDictionaryApiService
+import com.lingdict.app.data.remote.MerriamApiService
 import com.lingdict.app.data.remote.PexelsApiService
 import com.lingdict.app.data.remote.YoudaoApiService
+import com.lingdict.app.data.remote.WordsApiService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -39,6 +41,14 @@ object NetworkModule {
     @Qualifier
     @Retention(AnnotationRetention.BINARY)
     annotation class DatamuseRetrofit
+
+    @Qualifier
+    @Retention(AnnotationRetention.BINARY)
+    annotation class MerriamRetrofit
+
+    @Qualifier
+    @Retention(AnnotationRetention.BINARY)
+    annotation class WordsApiRetrofit
 
     @Provides
     @Singleton
@@ -111,6 +121,28 @@ object NetworkModule {
 
     @Provides
     @Singleton
+    @MerriamRetrofit
+    fun provideMerriamRetrofit(okHttpClient: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(MerriamApiService.BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    @WordsApiRetrofit
+    fun provideWordsApiRetrofit(okHttpClient: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(WordsApiService.BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
+    @Provides
+    @Singleton
     fun provideYoudaoApiService(@YoudaoRetrofit retrofit: Retrofit): YoudaoApiService {
         return retrofit.create(YoudaoApiService::class.java)
     }
@@ -131,5 +163,17 @@ object NetworkModule {
     @Singleton
     fun provideDatamuseApiService(@DatamuseRetrofit retrofit: Retrofit): DatamuseApiService {
         return retrofit.create(DatamuseApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideMerriamApiService(@MerriamRetrofit retrofit: Retrofit): MerriamApiService {
+        return retrofit.create(MerriamApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideWordsApiService(@WordsApiRetrofit retrofit: Retrofit): WordsApiService {
+        return retrofit.create(WordsApiService::class.java)
     }
 }

@@ -56,11 +56,23 @@ class SettingsRepositoryImpl @Inject constructor(
         settingsDataStore.updatePexelsApiKey(apiKey)
     }
 
+    override suspend fun updateOnlineLookupPreferred(enabled: Boolean) {
+        settingsDataStore.updateOnlineLookupPreferred(enabled)
+    }
+
     override suspend fun updateFreeDictionaryEnabled(enabled: Boolean) {
         settingsDataStore.updateFreeDictionaryEnabled(enabled)
     }
 
     override suspend fun updateDatamuseEnabled(enabled: Boolean) {
         settingsDataStore.updateDatamuseEnabled(enabled)
+    }
+
+    override suspend fun updateMerriamSettings(enabled: Boolean, apiKey: String) {
+        settingsDataStore.updateMerriamSettings(enabled, apiKey)
+    }
+
+    override suspend fun updateWordsApiSettings(enabled: Boolean, apiKey: String, host: String) {
+        settingsDataStore.updateWordsApiSettings(enabled, apiKey, host)
     }
 }

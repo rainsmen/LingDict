@@ -27,8 +27,14 @@ data class UserSettings(
     val youdaoAppKey: String = "",
     val youdaoAppSecret: String = "",
     val pexelsApiKey: String = "",
+    val onlineLookupPreferred: Boolean = false,
     val freeDictionaryEnabled: Boolean = true,
-    val datamuseEnabled: Boolean = true
+    val datamuseEnabled: Boolean = true,
+    val merriamEnabled: Boolean = false,
+    val merriamApiKey: String = "",
+    val wordsApiEnabled: Boolean = false,
+    val wordsApiKey: String = "",
+    val wordsApiHost: String = "wordsapiv1.p.rapidapi.com"
 )
 
 @Singleton
@@ -50,8 +56,14 @@ class SettingsDataStore @Inject constructor(
         val YOUDAO_APP_KEY = stringPreferencesKey("youdao_app_key")
         val YOUDAO_APP_SECRET = stringPreferencesKey("youdao_app_secret")
         val PEXELS_API_KEY = stringPreferencesKey("pexels_api_key")
+        val ONLINE_LOOKUP_PREFERRED = booleanPreferencesKey("online_lookup_preferred")
         val FREE_DICTIONARY_ENABLED = booleanPreferencesKey("free_dictionary_enabled")
         val DATAMUSE_ENABLED = booleanPreferencesKey("datamuse_enabled")
+        val MERRIAM_ENABLED = booleanPreferencesKey("merriam_enabled")
+        val MERRIAM_API_KEY = stringPreferencesKey("merriam_api_key")
+        val WORDS_API_ENABLED = booleanPreferencesKey("words_api_enabled")
+        val WORDS_API_KEY = stringPreferencesKey("words_api_key")
+        val WORDS_API_HOST = stringPreferencesKey("words_api_host")
     }
 
     // Read settings as Flow
@@ -76,8 +88,14 @@ class SettingsDataStore @Inject constructor(
                 youdaoAppKey = preferences[PreferencesKeys.YOUDAO_APP_KEY].orEmpty(),
                 youdaoAppSecret = preferences[PreferencesKeys.YOUDAO_APP_SECRET].orEmpty(),
                 pexelsApiKey = preferences[PreferencesKeys.PEXELS_API_KEY].orEmpty(),
+                onlineLookupPreferred = preferences[PreferencesKeys.ONLINE_LOOKUP_PREFERRED] ?: false,
                 freeDictionaryEnabled = preferences[PreferencesKeys.FREE_DICTIONARY_ENABLED] ?: true,
-                datamuseEnabled = preferences[PreferencesKeys.DATAMUSE_ENABLED] ?: true
+                datamuseEnabled = preferences[PreferencesKeys.DATAMUSE_ENABLED] ?: true,
+                merriamEnabled = preferences[PreferencesKeys.MERRIAM_ENABLED] ?: false,
+                merriamApiKey = preferences[PreferencesKeys.MERRIAM_API_KEY].orEmpty(),
+                wordsApiEnabled = preferences[PreferencesKeys.WORDS_API_ENABLED] ?: false,
+                wordsApiKey = preferences[PreferencesKeys.WORDS_API_KEY].orEmpty(),
+                wordsApiHost = preferences[PreferencesKeys.WORDS_API_HOST] ?: "wordsapiv1.p.rapidapi.com"
             )
         }
 
@@ -149,6 +167,12 @@ class SettingsDataStore @Inject constructor(
         }
     }
 
+    suspend fun updateOnlineLookupPreferred(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.ONLINE_LOOKUP_PREFERRED] = enabled
+        }
+    }
+
     suspend fun updateFreeDictionaryEnabled(enabled: Boolean) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.FREE_DICTIONARY_ENABLED] = enabled
@@ -158,6 +182,21 @@ class SettingsDataStore @Inject constructor(
     suspend fun updateDatamuseEnabled(enabled: Boolean) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.DATAMUSE_ENABLED] = enabled
+        }
+    }
+
+    suspend fun updateMerriamSettings(enabled: Boolean, apiKey: String) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.MERRIAM_ENABLED] = enabled
+            preferences[PreferencesKeys.MERRIAM_API_KEY] = apiKey.trim()
+        }
+    }
+
+    suspend fun updateWordsApiSettings(enabled: Boolean, apiKey: String, host: String) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.WORDS_API_ENABLED] = enabled
+            preferences[PreferencesKeys.WORDS_API_KEY] = apiKey.trim()
+            preferences[PreferencesKeys.WORDS_API_HOST] = host.trim().ifBlank { "wordsapiv1.p.rapidapi.com" }
         }
     }
 

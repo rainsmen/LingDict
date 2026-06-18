@@ -69,8 +69,11 @@ fun SettingsScreen(
         onYoudaoEnabledChange = viewModel::updateYoudaoEnabled,
         onYoudaoCredentialsChange = viewModel::updateYoudaoCredentials,
         onPexelsApiKeyChange = viewModel::updatePexelsApiKey,
+        onOnlineLookupPreferredChange = viewModel::updateOnlineLookupPreferred,
         onFreeDictionaryEnabledChange = viewModel::updateFreeDictionaryEnabled,
-        onDatamuseEnabledChange = viewModel::updateDatamuseEnabled
+        onDatamuseEnabledChange = viewModel::updateDatamuseEnabled,
+        onMerriamSettingsChange = viewModel::updateMerriamSettings,
+        onWordsApiSettingsChange = viewModel::updateWordsApiSettings
     )
 }
 
@@ -92,8 +95,11 @@ fun SettingsContent(
     onYoudaoEnabledChange: (Boolean) -> Unit = {},
     onYoudaoCredentialsChange: (String, String) -> Unit = { _, _ -> },
     onPexelsApiKeyChange: (String) -> Unit = {},
+    onOnlineLookupPreferredChange: (Boolean) -> Unit = {},
     onFreeDictionaryEnabledChange: (Boolean) -> Unit = {},
-    onDatamuseEnabledChange: (Boolean) -> Unit = {}
+    onDatamuseEnabledChange: (Boolean) -> Unit = {},
+    onMerriamSettingsChange: (Boolean, String) -> Unit = { _, _ -> },
+    onWordsApiSettingsChange: (Boolean, String, String) -> Unit = { _, _, _ -> }
 ) {
     var learningGoalDialogVisible by remember { mutableStateOf(false) }
     var reviewGoalDialogVisible by remember { mutableStateOf(false) }
@@ -192,7 +198,11 @@ fun SettingsContent(
                 SettingsItem(
                     icon = Icons.Default.Cloud,
                     title = "在线查询与 API",
-                    subtitle = "有道、Free Dictionary、Datamuse、Pexels",
+                    subtitle = if (userSettings.onlineLookupPreferred) {
+                        "在线优先；有道、Free Dictionary、Merriam、WordsAPI、Datamuse"
+                    } else {
+                        "本地优先；有道、Free Dictionary、Merriam、WordsAPI、Datamuse"
+                    },
                     onClick = { apiDialogVisible = true }
                 )
             }
@@ -237,8 +247,11 @@ fun SettingsContent(
             onYoudaoEnabledChange = onYoudaoEnabledChange,
             onYoudaoCredentialsChange = onYoudaoCredentialsChange,
             onPexelsApiKeyChange = onPexelsApiKeyChange,
+            onOnlineLookupPreferredChange = onOnlineLookupPreferredChange,
             onFreeDictionaryEnabledChange = onFreeDictionaryEnabledChange,
-            onDatamuseEnabledChange = onDatamuseEnabledChange
+            onDatamuseEnabledChange = onDatamuseEnabledChange,
+            onMerriamSettingsChange = onMerriamSettingsChange,
+            onWordsApiSettingsChange = onWordsApiSettingsChange
         )
     }
 
@@ -287,15 +300,24 @@ private fun ApiSettingsDialog(
     onYoudaoEnabledChange: (Boolean) -> Unit,
     onYoudaoCredentialsChange: (String, String) -> Unit,
     onPexelsApiKeyChange: (String) -> Unit,
+    onOnlineLookupPreferredChange: (Boolean) -> Unit,
     onFreeDictionaryEnabledChange: (Boolean) -> Unit,
-    onDatamuseEnabledChange: (Boolean) -> Unit
+    onDatamuseEnabledChange: (Boolean) -> Unit,
+    onMerriamSettingsChange: (Boolean, String) -> Unit,
+    onWordsApiSettingsChange: (Boolean, String, String) -> Unit
 ) {
     var youdaoAppKey by remember(userSettings.youdaoAppKey) { mutableStateOf(userSettings.youdaoAppKey) }
     var youdaoAppSecret by remember(userSettings.youdaoAppSecret) { mutableStateOf(userSettings.youdaoAppSecret) }
     var pexelsApiKey by remember(userSettings.pexelsApiKey) { mutableStateOf(userSettings.pexelsApiKey) }
+    var merriamApiKey by remember(userSettings.merriamApiKey) { mutableStateOf(userSettings.merriamApiKey) }
+    var wordsApiKey by remember(userSettings.wordsApiKey) { mutableStateOf(userSettings.wordsApiKey) }
+    var wordsApiHost by remember(userSettings.wordsApiHost) { mutableStateOf(userSettings.wordsApiHost) }
+    var onlineLookupPreferred by remember(userSettings.onlineLookupPreferred) { mutableStateOf(userSettings.onlineLookupPreferred) }
     var youdaoEnabled by remember(userSettings.youdaoEnabled) { mutableStateOf(userSettings.youdaoEnabled) }
     var freeDictionaryEnabled by remember(userSettings.freeDictionaryEnabled) { mutableStateOf(userSettings.freeDictionaryEnabled) }
     var datamuseEnabled by remember(userSettings.datamuseEnabled) { mutableStateOf(userSettings.datamuseEnabled) }
+    var merriamEnabled by remember(userSettings.merriamEnabled) { mutableStateOf(userSettings.merriamEnabled) }
+    var wordsApiEnabled by remember(userSettings.wordsApiEnabled) { mutableStateOf(userSettings.wordsApiEnabled) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -307,6 +329,18 @@ private fun ApiSettingsDialog(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("在线优先")
+                        Text(
+                            text = "开启后先查在线词典，失败再回退本地词库",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(checked = onlineLookupPreferred, onCheckedChange = { onlineLookupPreferred = it })
+                }
+                Divider()
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("有道词典", modifier = Modifier.weight(1f))
                     Switch(checked = youdaoEnabled, onCheckedChange = { youdaoEnabled = it })
@@ -334,6 +368,35 @@ private fun ApiSettingsDialog(
                     Text("Datamuse", modifier = Modifier.weight(1f))
                     Switch(checked = datamuseEnabled, onCheckedChange = { datamuseEnabled = it })
                 }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Merriam-Webster Learner", modifier = Modifier.weight(1f))
+                    Switch(checked = merriamEnabled, onCheckedChange = { merriamEnabled = it })
+                }
+                OutlinedTextField(
+                    value = merriamApiKey,
+                    onValueChange = { merriamApiKey = it },
+                    label = { Text("Merriam-Webster API_KEY") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("WordsAPI / RapidAPI", modifier = Modifier.weight(1f))
+                    Switch(checked = wordsApiEnabled, onCheckedChange = { wordsApiEnabled = it })
+                }
+                OutlinedTextField(
+                    value = wordsApiKey,
+                    onValueChange = { wordsApiKey = it },
+                    label = { Text("WordsAPI RapidAPI Key") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = wordsApiHost,
+                    onValueChange = { wordsApiHost = it },
+                    label = { Text("WordsAPI RapidAPI Host") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
                 Divider()
                 OutlinedTextField(
                     value = pexelsApiKey,
@@ -349,8 +412,11 @@ private fun ApiSettingsDialog(
                 onYoudaoEnabledChange(youdaoEnabled)
                 onYoudaoCredentialsChange(youdaoAppKey, youdaoAppSecret)
                 onPexelsApiKeyChange(pexelsApiKey)
+                onOnlineLookupPreferredChange(onlineLookupPreferred)
                 onFreeDictionaryEnabledChange(freeDictionaryEnabled)
                 onDatamuseEnabledChange(datamuseEnabled)
+                onMerriamSettingsChange(merriamEnabled, merriamApiKey)
+                onWordsApiSettingsChange(wordsApiEnabled, wordsApiKey, wordsApiHost)
                 onDismiss()
             }) { Text("保存") }
         },
@@ -510,8 +576,11 @@ fun SettingsScreenPreview() {
                 showPhonetic = true,
                 cardBackgroundEnabled = true,
                 youdaoEnabled = true,
+                onlineLookupPreferred = false,
                 freeDictionaryEnabled = true,
-                datamuseEnabled = true
+                datamuseEnabled = true,
+                merriamEnabled = false,
+                wordsApiEnabled = false
             )
         )
     }

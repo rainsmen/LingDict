@@ -119,6 +119,12 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun updateOnlineLookupPreferred(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.updateOnlineLookupPreferred(enabled)
+        }
+    }
+
     fun updateFreeDictionaryEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.updateFreeDictionaryEnabled(enabled)
@@ -128,6 +134,18 @@ class SettingsViewModel @Inject constructor(
     fun updateDatamuseEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.updateDatamuseEnabled(enabled)
+        }
+    }
+
+    fun updateMerriamSettings(enabled: Boolean, apiKey: String) {
+        viewModelScope.launch {
+            settingsRepository.updateMerriamSettings(enabled, apiKey)
+        }
+    }
+
+    fun updateWordsApiSettings(enabled: Boolean, apiKey: String, host: String) {
+        viewModelScope.launch {
+            settingsRepository.updateWordsApiSettings(enabled, apiKey, host)
         }
     }
 }
