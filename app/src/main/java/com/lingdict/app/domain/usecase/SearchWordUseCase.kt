@@ -47,6 +47,6 @@ class SearchWordUseCase @Inject constructor(
 
     private fun fallbackImageUrl(word: String): String {
         val query = URLEncoder.encode(word, StandardCharsets.UTF_8.name())
-        return "https://picsum.photos/seed/$query/800/600"
+        return "https://loremflickr.com/800/600/$query"
     }
 }

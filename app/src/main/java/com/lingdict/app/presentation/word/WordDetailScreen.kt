@@ -158,6 +158,10 @@ fun WordDetailView(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        MeaningSection(word = word)
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         // Image card (if available)
         if (imageUrl != null) {
             Card(
@@ -271,6 +275,38 @@ fun WordDetailView(
         }
 
         Spacer(modifier = Modifier.height(80.dp)) // Space for FAB
+    }
+}
+
+@Composable
+private fun MeaningSection(word: Word) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Text(
+                text = "释义",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            if (!word.translation.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = word.translation,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+            if (!word.definition.isNullOrBlank() && word.definition != word.translation) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = word.definition,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }
 

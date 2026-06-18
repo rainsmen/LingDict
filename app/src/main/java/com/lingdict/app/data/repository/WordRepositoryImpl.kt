@@ -3,9 +3,11 @@ package com.lingdict.app.data.repository
 import com.lingdict.app.BuildConfig
 import com.lingdict.app.data.local.dao.ExampleDao
 import com.lingdict.app.data.local.dao.WordDao
+import com.lingdict.app.data.local.entity.ExampleEntity
 import com.lingdict.app.data.local.entity.WordEntity
 import com.lingdict.app.data.mapper.toWordEntity
 import com.lingdict.app.data.remote.FreeDictionaryApiService
+import com.lingdict.app.data.remote.dto.FreeDictionaryDefinition
 import com.lingdict.app.data.remote.YoudaoApiService
 import com.lingdict.app.domain.model.Example
 import com.lingdict.app.domain.model.Word
@@ -42,18 +44,20 @@ class WordRepositoryImpl @Inject constructor(
      * 实现接口：获取单词详情
      */
     override suspend fun getWord(word: String): Word? {
-        return getWordInternal(word).getOrNull()?.let { wordEntity ->
-            val examples = exampleDao.getExamples(word).first().map { exampleEntity ->
-                Example(
-                    sentenceEn = exampleEntity.sentenceEn,
-                    sentenceZh = exampleEntity.sentenceZh,
-                    source = exampleEntity.source
-                )
-            }
-            wordEntity.toDomainModel().copy(
-                examples = examples.ifEmpty { fallbackExamples(wordEntity) }
+        val wordEntity = getWordInternal(word).getOrNull() ?: return null
+        val enrichedEntity = enrichWordEntity(wordEntity)
+
+        val examples = exampleDao.getExamples(enrichedEntity.word).first().map { exampleEntity ->
+            Example(
+                sentenceEn = exampleEntity.sentenceEn,
+                sentenceZh = exampleEntity.sentenceZh,
+                source = exampleEntity.source
             )
         }
+
+        return enrichedEntity.toDomainModel().copy(
+            examples = examples.ifEmpty { fallbackExamples(enrichedEntity) }
+        )
     }
 
     /**
@@ -102,17 +106,29 @@ class WordRepositoryImpl @Inject constructor(
                 wordDao.insertWord(wordEntity)
                 Result.success(wordEntity)
             } else {
+                commonFallback(word)?.let { commonWord ->
+                    wordDao.insertWord(commonWord.toWordEntity(word))
+                    exampleDao.insertExamples(commonWord.toExampleEntities(word))
+                    return Result.success(commonWord.toWordEntity(word))
+                }
+
                 getWordFromFreeDictionary(word)?.let { fallbackWord ->
                     wordDao.insertWord(fallbackWord)
                     Result.success(fallbackWord)
-                } ?: Result.success(createMinimalWord(word))
+                } ?: Result.failure(Exception("单词未找到或在线词典暂不可用"))
             }
 
         } catch (e: Exception) {
+            commonFallback(word)?.let { commonWord ->
+                wordDao.insertWord(commonWord.toWordEntity(word))
+                exampleDao.insertExamples(commonWord.toExampleEntities(word))
+                return Result.success(commonWord.toWordEntity(word))
+            }
+
             getWordFromFreeDictionary(word)?.let { fallbackWord ->
                 wordDao.insertWord(fallbackWord)
                 Result.success(fallbackWord)
-            } ?: Result.success(createMinimalWord(word))
+            } ?: Result.failure(e)
         }
     }
 
@@ -163,24 +179,58 @@ class WordRepositoryImpl @Inject constructor(
         return wordDao.wordExists(word)
     }
 
+    private suspend fun enrichWordEntity(word: WordEntity): WordEntity {
+        val normalized = word.word.lowercase()
+        val common = commonFallback(normalized)
+        val shouldFetchOnline = word.phonetic.isNullOrBlank() || word.audio.isNullOrBlank()
+
+        val online = if (shouldFetchOnline) getWordFromFreeDictionary(normalized) else null
+        val enriched = word.copy(
+            phonetic = word.phonetic?.takeIf { it.isNotBlank() }
+                ?: common?.phonetic
+                ?: online?.phonetic,
+            audio = word.audio?.takeIf { it.isNotBlank() } ?: online?.audio,
+            definition = word.definition.ifBlank { common?.definition ?: online?.definition.orEmpty() },
+            translation = word.translation.ifBlank { common?.translation ?: online?.translation.orEmpty() },
+            pos = word.pos ?: common?.pos ?: online?.pos
+        )
+
+        if (enriched != word) {
+            wordDao.insertWord(enriched)
+        }
+        common?.toExampleEntities(enriched.word)?.takeIf { it.isNotEmpty() }?.let { examples ->
+            if (exampleDao.getExamples(enriched.word).first().isEmpty()) {
+                exampleDao.insertExamples(examples)
+            }
+        }
+        return enriched
+    }
+
     private suspend fun getWordFromFreeDictionary(word: String): WordEntity? {
         return try {
             val entry = freeDictionaryApi.lookup(word.trim().lowercase()).firstOrNull() ?: return null
-            val firstMeaning = entry.meanings.orEmpty().firstOrNull()
-            val firstDefinition = firstMeaning?.definitions.orEmpty()
-                .firstOrNull { !it.definition.isNullOrBlank() }
-                ?.definition
-                .orEmpty()
+            val meanings = entry.meanings.orEmpty()
+            val firstMeaning = meanings.firstOrNull()
+            val definitions = meanings.flatMap { meaning ->
+                meaning.definitions.orEmpty().filter { !it.definition.isNullOrBlank() }
+            }
+            val firstDefinition = definitions.firstOrNull()?.definition.orEmpty()
             if (firstDefinition.isBlank()) return null
 
             val phonetic = entry.phonetic
                 ?: entry.phonetics.orEmpty().firstOrNull { !it.text.isNullOrBlank() }?.text
             val audio = entry.phonetics.orEmpty().firstOrNull { !it.audio.isNullOrBlank() }?.audio
+            val resolvedWord = entry.word?.ifBlank { word } ?: word
+
+            val examples = definitions.toExamples(resolvedWord)
+            if (examples.isNotEmpty()) {
+                exampleDao.insertExamples(examples)
+            }
 
             WordEntity(
-                word = entry.word?.ifBlank { word } ?: word,
+                word = resolvedWord,
                 phonetic = phonetic?.takeIf { it.isNotBlank() },
-                definition = firstDefinition,
+                definition = definitions.take(2).mapNotNull { it.definition }.joinToString("; ").ifBlank { firstDefinition },
                 translation = firstDefinition,
                 pos = firstMeaning?.partOfSpeech,
                 audio = audio,
@@ -191,43 +241,148 @@ class WordRepositoryImpl @Inject constructor(
         }
     }
 
-    private fun createMinimalWord(word: String): WordEntity {
-        val normalized = word.trim()
-        return WordEntity(
-            word = normalized,
-            definition = "No local or online definition was returned for this word.",
-            translation = "暂无释义，可稍后重试在线查询。",
-            addedTime = System.currentTimeMillis()
-        )
+    private fun List<FreeDictionaryDefinition>.toExamples(word: String): List<ExampleEntity> {
+        return mapNotNull { definition ->
+            val example = definition.example?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            ExampleEntity(
+                word = word,
+                sentenceEn = example,
+                sentenceZh = definition.definition.orEmpty(),
+                source = "Free Dictionary"
+            )
+        }.distinctBy { it.sentenceEn }.take(3)
     }
 
     private fun fallbackExamples(word: WordEntity): List<Example> {
-        val meaning = word.translation.ifBlank { word.definition }.ifBlank { "这个词" }
-        val templates = listOf(
-            Example(
-                sentenceEn = "The article uses ${word.word} to express an important idea.",
-                sentenceZh = "这篇文章用 ${word.word} 表达一个重要意思：$meaning。",
-                source = "LingDict"
-            ),
-            Example(
-                sentenceEn = "You may see ${word.word} in reading, writing, or daily conversation.",
-                sentenceZh = "你可能会在阅读、写作或日常对话中见到 ${word.word}。",
-                source = "LingDict"
-            ),
-            Example(
-                sentenceEn = "Try to connect ${word.word} with a real situation you know.",
-                sentenceZh = "试着把 ${word.word} 和你熟悉的真实场景联系起来。",
-                source = "LingDict"
-            ),
-            Example(
-                sentenceEn = "A short sentence can make ${word.word} easier to remember.",
-                sentenceZh = "一个短句可以让 ${word.word} 更容易被记住。",
-                source = "LingDict"
+        return commonFallback(word.word)?.examples?.takeIf { it.isNotEmpty() } ?: emptyList()
+    }
+
+    private data class CommonFallbackWord(
+        val word: String,
+        val phonetic: String,
+        val definition: String,
+        val translation: String,
+        val pos: String,
+        val examples: List<Example>
+    ) {
+        fun toWordEntity(requestedWord: String): WordEntity {
+            return WordEntity(
+                word = requestedWord.trim().ifBlank { word },
+                phonetic = phonetic,
+                definition = definition,
+                translation = translation,
+                pos = pos,
+                addedTime = System.currentTimeMillis()
+            )
+        }
+
+        fun toExampleEntities(requestedWord: String): List<ExampleEntity> {
+            val resolvedWord = requestedWord.trim().ifBlank { word }
+            return examples.map { example ->
+                ExampleEntity(
+                    word = resolvedWord,
+                    sentenceEn = example.sentenceEn,
+                    sentenceZh = example.sentenceZh,
+                    source = example.source
+                )
+            }
+        }
+    }
+
+    private fun commonFallback(word: String): CommonFallbackWord? {
+        return commonFallbackWords[word.trim().lowercase()]
+    }
+
+    private val commonFallbackWords = mapOf(
+        "apple" to CommonFallbackWord(
+            word = "apple",
+            phonetic = "/ˈæpəl/",
+            definition = "A round fruit with red, yellow, or green skin and firm white flesh.",
+            translation = "n. 苹果；苹果树",
+            pos = "noun",
+            examples = listOf(
+                Example("She packed an apple in her lunch bag.", "她在午餐袋里放了一个苹果。", "LingDict"),
+                Example("The apple tree blooms every spring.", "这棵苹果树每年春天都会开花。", "LingDict")
+            )
+        ),
+        "application" to CommonFallbackWord(
+            word = "application",
+            phonetic = "/ˌæplɪˈkeɪʃən/",
+            definition = "A formal request, a practical use, or a computer program designed for a task.",
+            translation = "n. 申请；应用；应用程序",
+            pos = "noun",
+            examples = listOf(
+                Example("Her job application was accepted yesterday.", "她的求职申请昨天被接受了。", "LingDict"),
+                Example("This application helps students review vocabulary.", "这个应用程序帮助学生复习词汇。", "LingDict")
+            )
+        ),
+        "apply" to CommonFallbackWord(
+            word = "apply",
+            phonetic = "/əˈplaɪ/",
+            definition = "To make a formal request or to put something to practical use.",
+            translation = "v. 申请；应用；涂抹",
+            pos = "verb",
+            examples = listOf(
+                Example("You should apply for the scholarship before Friday.", "你应该在周五前申请奖学金。", "LingDict"),
+                Example("Apply the cream gently to the skin.", "把乳霜轻轻涂在皮肤上。", "LingDict")
+            )
+        ),
+        "banana" to CommonFallbackWord(
+            word = "banana",
+            phonetic = "/bəˈnænə/",
+            definition = "A long curved fruit with a yellow skin and soft sweet flesh.",
+            translation = "n. 香蕉",
+            pos = "noun",
+            examples = listOf(
+                Example("He ate a banana after running.", "他跑步后吃了一根香蕉。", "LingDict"),
+                Example("Bananas are rich in potassium.", "香蕉富含钾。", "LingDict")
+            )
+        ),
+        "computer" to CommonFallbackWord(
+            word = "computer",
+            phonetic = "/kəmˈpjuːtər/",
+            definition = "An electronic machine that stores and processes data.",
+            translation = "n. 计算机；电脑",
+            pos = "noun",
+            examples = listOf(
+                Example("The computer stores all the project files.", "这台电脑保存了所有项目文件。", "LingDict"),
+                Example("She bought a new computer for school.", "她为上学买了一台新电脑。", "LingDict")
+            )
+        ),
+        "dictionary" to CommonFallbackWord(
+            word = "dictionary",
+            phonetic = "/ˈdɪkʃəneri/",
+            definition = "A book or digital resource that explains words and their meanings.",
+            translation = "n. 字典；词典",
+            pos = "noun",
+            examples = listOf(
+                Example("I looked up the word in a dictionary.", "我在词典里查了这个单词。", "LingDict"),
+                Example("A good dictionary gives examples as well as meanings.", "一本好词典会给出例句和释义。", "LingDict")
+            )
+        ),
+        "hello" to CommonFallbackWord(
+            word = "hello",
+            phonetic = "/həˈloʊ/",
+            definition = "A greeting used when meeting someone or starting a conversation.",
+            translation = "int. 你好；喂",
+            pos = "interjection",
+            examples = listOf(
+                Example("She smiled and said hello.", "她微笑着说了声你好。", "LingDict"),
+                Example("Hello, may I speak to Mr. Chen?", "喂，我可以和陈先生通话吗？", "LingDict")
+            )
+        ),
+        "world" to CommonFallbackWord(
+            word = "world",
+            phonetic = "/wɜːrld/",
+            definition = "The earth and all the people, places, and things on it.",
+            translation = "n. 世界；地球；领域",
+            pos = "noun",
+            examples = listOf(
+                Example("People around the world use the internet every day.", "世界各地的人每天都使用互联网。", "LingDict"),
+                Example("The discovery changed the world of medicine.", "这项发现改变了医学界。", "LingDict")
             )
         )
-        val start = word.word.lowercase().fold(0) { acc, char -> acc + char.code } % templates.size
-        return listOf(templates[start], templates[(start + 1) % templates.size])
-    }
+    )
 
     /**
      * Entity转Domain模型
