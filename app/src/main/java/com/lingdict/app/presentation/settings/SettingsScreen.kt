@@ -57,6 +57,8 @@ fun SettingsScreen(
         userSettings = userSettings,
         isExportingVocabulary = uiState.isExportingVocabulary,
         exportError = uiState.exportError,
+        isTestingApis = uiState.isTestingApis,
+        apiTestResult = uiState.apiTestResult,
         onExportVocabulary = viewModel::exportVocabularyPdf,
         onDismissExportError = viewModel::clearExportError,
         onDarkModeChange = viewModel::updateDarkMode,
@@ -69,6 +71,8 @@ fun SettingsScreen(
         onYoudaoEnabledChange = viewModel::updateYoudaoEnabled,
         onYoudaoCredentialsChange = viewModel::updateYoudaoCredentials,
         onPexelsApiKeyChange = viewModel::updatePexelsApiKey,
+        onTestApiSettings = viewModel::testApiSettings,
+        onClearApiTestResult = viewModel::clearApiTestResult,
         onOnlineLookupPreferredChange = viewModel::updateOnlineLookupPreferred,
         onFreeDictionaryEnabledChange = viewModel::updateFreeDictionaryEnabled,
         onDatamuseEnabledChange = viewModel::updateDatamuseEnabled,
@@ -83,6 +87,8 @@ fun SettingsContent(
     userSettings: UserSettings,
     isExportingVocabulary: Boolean = false,
     exportError: String? = null,
+    isTestingApis: Boolean = false,
+    apiTestResult: String? = null,
     onExportVocabulary: () -> Unit = {},
     onDismissExportError: () -> Unit = {},
     onDarkModeChange: (Boolean) -> Unit = {},
@@ -95,6 +101,8 @@ fun SettingsContent(
     onYoudaoEnabledChange: (Boolean) -> Unit = {},
     onYoudaoCredentialsChange: (String, String) -> Unit = { _, _ -> },
     onPexelsApiKeyChange: (String) -> Unit = {},
+    onTestApiSettings: (ApiSettingsTestRequest) -> Unit = {},
+    onClearApiTestResult: () -> Unit = {},
     onOnlineLookupPreferredChange: (Boolean) -> Unit = {},
     onFreeDictionaryEnabledChange: (Boolean) -> Unit = {},
     onDatamuseEnabledChange: (Boolean) -> Unit = {},
@@ -246,7 +254,11 @@ fun SettingsContent(
             onDismiss = { apiDialogVisible = false },
             onYoudaoEnabledChange = onYoudaoEnabledChange,
             onYoudaoCredentialsChange = onYoudaoCredentialsChange,
+            isTestingApis = isTestingApis,
+            apiTestResult = apiTestResult,
             onPexelsApiKeyChange = onPexelsApiKeyChange,
+            onTestApiSettings = onTestApiSettings,
+            onClearApiTestResult = onClearApiTestResult,
             onOnlineLookupPreferredChange = onOnlineLookupPreferredChange,
             onFreeDictionaryEnabledChange = onFreeDictionaryEnabledChange,
             onDatamuseEnabledChange = onDatamuseEnabledChange,
@@ -296,10 +308,14 @@ fun SettingsContent(
 @Composable
 private fun ApiSettingsDialog(
     userSettings: UserSettings,
+    isTestingApis: Boolean,
+    apiTestResult: String?,
     onDismiss: () -> Unit,
     onYoudaoEnabledChange: (Boolean) -> Unit,
     onYoudaoCredentialsChange: (String, String) -> Unit,
     onPexelsApiKeyChange: (String) -> Unit,
+    onTestApiSettings: (ApiSettingsTestRequest) -> Unit,
+    onClearApiTestResult: () -> Unit,
     onOnlineLookupPreferredChange: (Boolean) -> Unit,
     onFreeDictionaryEnabledChange: (Boolean) -> Unit,
     onDatamuseEnabledChange: (Boolean) -> Unit,
@@ -405,6 +421,36 @@ private fun ApiSettingsDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+                OutlinedButton(
+                    onClick = {
+                        onTestApiSettings(
+                            ApiSettingsTestRequest(
+                                youdaoEnabled = youdaoEnabled,
+                                youdaoAppKey = youdaoAppKey,
+                                youdaoAppSecret = youdaoAppSecret,
+                                freeDictionaryEnabled = freeDictionaryEnabled,
+                                datamuseEnabled = datamuseEnabled,
+                                merriamEnabled = merriamEnabled,
+                                merriamApiKey = merriamApiKey,
+                                wordsApiEnabled = wordsApiEnabled,
+                                wordsApiKey = wordsApiKey,
+                                wordsApiHost = wordsApiHost,
+                                pexelsApiKey = pexelsApiKey
+                            )
+                        )
+                    },
+                    enabled = !isTestingApis,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (isTestingApis) "检测中..." else "检测 API 设置")
+                }
+                apiTestResult?.let { result ->
+                    Text(
+                        text = result,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         },
         confirmButton = {
@@ -417,11 +463,15 @@ private fun ApiSettingsDialog(
                 onDatamuseEnabledChange(datamuseEnabled)
                 onMerriamSettingsChange(merriamEnabled, merriamApiKey)
                 onWordsApiSettingsChange(wordsApiEnabled, wordsApiKey, wordsApiHost)
+                onClearApiTestResult()
                 onDismiss()
             }) { Text("保存") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("取消") }
+            TextButton(onClick = {
+                onClearApiTestResult()
+                onDismiss()
+            }) { Text("取消") }
         }
     )
 }

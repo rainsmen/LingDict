@@ -246,19 +246,20 @@ class WordRepositoryImpl @Inject constructor(
 
     private suspend fun getWordFromOnlineFallbacks(
         word: String,
-        settings: UserSettings = settingsDataStore.userSettingsFlow.first()
+        settings: UserSettings? = null
     ): OnlineLookupResult? {
-        getWordFromYoudao(word, settings)?.let { return it }
-        if (settings.freeDictionaryEnabled) {
+        val activeSettings = settings ?: settingsDataStore.userSettingsFlow.first()
+        getWordFromYoudao(word, activeSettings)?.let { return it }
+        if (activeSettings.freeDictionaryEnabled) {
             getWordFromFreeDictionary(word)?.let { return it }
         }
-        if (settings.merriamEnabled && settings.merriamApiKey.isNotBlank()) {
-            getWordFromMerriam(word, settings.merriamApiKey)?.let { return it }
+        if (activeSettings.merriamEnabled && activeSettings.merriamApiKey.isNotBlank()) {
+            getWordFromMerriam(word, activeSettings.merriamApiKey)?.let { return it }
         }
-        if (settings.wordsApiEnabled && settings.wordsApiKey.isNotBlank()) {
-            getWordFromWordsApi(word, settings.wordsApiKey, settings.wordsApiHost)?.let { return it }
+        if (activeSettings.wordsApiEnabled && activeSettings.wordsApiKey.isNotBlank()) {
+            getWordFromWordsApi(word, activeSettings.wordsApiKey, activeSettings.wordsApiHost)?.let { return it }
         }
-        if (settings.datamuseEnabled) {
+        if (activeSettings.datamuseEnabled) {
             getWordFromDatamuse(word)?.let { return it }
         }
         return null
