@@ -95,19 +95,24 @@ class SettingsViewModel @Inject constructor(
             _uiState.update { it.copy(isTestingApis = true, apiTestResult = null) }
             val results = mutableListOf<String>()
 
-            suspend fun check(name: String, enabled: Boolean = true, block: suspend () -> Boolean) {
+            suspend fun check(name: String, enabled: Boolean = true, block: suspend () -> String?) {
                 if (!enabled) {
                     results += "$name：未启用"
                     return
                 }
-                val passed = runCatching { block() }.getOrDefault(false)
-                results += "$name：${if (passed) "可用" else "不可用"}"
+                val failureReason = runCatching { block() }
+                    .getOrElse { exception -> exception.toReadableReason() }
+                results += if (failureReason == null) {
+                    "$name：可用"
+                } else {
+                    "$name：不可用（$failureReason）"
+                }
             }
 
             check("有道", request.youdaoEnabled) {
                 val appKey = request.youdaoAppKey.ifBlank { BuildConfig.YOUDAO_APP_KEY }
                 val appSecret = request.youdaoAppSecret.ifBlank { BuildConfig.YOUDAO_APP_SECRET }
-                if (appKey.isBlank() || appSecret.isBlank()) return@check false
+                if (appKey.isBlank() || appSecret.isBlank()) return@check "未配置 APP_KEY/APP_SECRET"
                 val query = "apple"
                 val salt = YoudaoSignUtil.generateSalt()
                 val curtime = YoudaoSignUtil.getCurrentTime()
@@ -119,31 +124,39 @@ class SettingsViewModel @Inject constructor(
                     sign = sign,
                     curtime = curtime
                 )
-                response.errorCode == "0" && (!response.translation.isNullOrEmpty() || response.basic != null)
+                if (response.errorCode == "0" && (!response.translation.isNullOrEmpty() || response.basic != null)) {
+                    null
+                } else {
+                    "错误码 ${response.errorCode}"
+                }
             }
 
             check("Free Dictionary", request.freeDictionaryEnabled) {
-                freeDictionaryApi.lookup("apple").isNotEmpty()
+                if (freeDictionaryApi.lookup("apple").isNotEmpty()) null else "无返回结果"
             }
 
             check("Datamuse", request.datamuseEnabled) {
-                datamuseApi.words(spelling = "apple", metadata = "dps", max = 1).isNotEmpty()
+                if (datamuseApi.words(spelling = "apple", metadata = "dps", max = 1).isNotEmpty()) null else "无返回结果"
             }
 
             check("Merriam-Webster", request.merriamEnabled) {
                 val apiKey = request.merriamApiKey.trim()
-                apiKey.isNotBlank() && merriamApi.lookup("apple", apiKey).any { !it.shortDefinitions.isNullOrEmpty() }
+                if (apiKey.isBlank()) return@check "未配置 API_KEY"
+                val entries = merriamApi.lookup("apple", apiKey)
+                if (entries.any { !it.shortDefinitions.isNullOrEmpty() }) null else "无释义返回"
             }
 
             check("WordsAPI", request.wordsApiEnabled) {
                 val apiKey = request.wordsApiKey.trim()
                 val host = request.wordsApiHost.trim().ifBlank { WordsApiService.DEFAULT_HOST }
-                apiKey.isNotBlank() && !wordsApi.lookup("apple", apiKey, host).results.isNullOrEmpty()
+                if (apiKey.isBlank()) return@check "未配置 RapidAPI Key"
+                if (!wordsApi.lookup("apple", apiKey, host).results.isNullOrEmpty()) null else "无释义返回"
             }
 
             check("Pexels") {
                 val apiKey = request.pexelsApiKey.ifBlank { BuildConfig.PEXELS_API_KEY }
-                apiKey.isNotBlank() && pexelsApi.searchPhotos(query = "apple", perPage = 1, apiKey = apiKey).photos.isNotEmpty()
+                if (apiKey.isBlank()) return@check "未配置 API_KEY"
+                if (pexelsApi.searchPhotos(query = "apple", perPage = 1, apiKey = apiKey).photos.isNotEmpty()) null else "无图片返回"
             }
 
             _uiState.update {
@@ -153,6 +166,11 @@ class SettingsViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    private fun Throwable.toReadableReason(): String {
+        val messageText = message.orEmpty().ifBlank { javaClass.simpleName }
+        return messageText.take(120)
     }
 
     fun clearApiTestResult() {
